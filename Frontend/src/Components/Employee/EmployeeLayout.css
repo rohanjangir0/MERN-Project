@@ -1,0 +1,43 @@
+.employee-layout {
+  display: flex;
+}
+
+/* Sidebar fixed left */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 220px;   /* must match margin-left below */
+  height: 100vh;
+  background: #fff;
+  border-right: 1px solid #e5e5e5;
+  z-index: 1000;
+}
+
+/* Main area starts after sidebar */
+.main-area {
+  flex: 1;
+  margin-left: 220px;  /* same as sidebar width */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navbar fixed top */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 221px;   /* start after sidebar */
+  right: 0;
+  height: 70px;  /* must match margin-top below */
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  z-index: 1000;
+}
+
+/* Content area starts after navbar */
+.content {
+  margin-top: 70px; /* equal to navbar height */
+  padding: 20px;
+  min-height: calc(100vh - 70px);
+  background: #f9f9f9;
+}

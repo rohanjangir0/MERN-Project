@@ -1,0 +1,203 @@
+.employee-management {
+  padding: 30px;
+  background: #f9fafc;
+  min-height: 100vh;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: #1f2937;
+  text-align: center;
+}
+
+/* Header */
+.employee-management h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  background: linear-gradient(90deg,#2563eb,#9333ea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.employee-management p {
+  color: #6b7280;
+  margin-bottom: 30px;
+  font-size: 15px;
+}
+
+/* ===== Metrics ===== */
+.metrics-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 35px;
+}
+
+.metrics-card {
+  padding: 20px;
+  border-radius: 16px;
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.metrics-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+.metrics-card h3 {
+  font-size: 14px;
+  opacity: 0.85;
+  margin: 0;
+}
+.metrics-card h2 {
+  font-size: 28px;
+  margin-top: 8px;
+}
+
+/* Gradient backgrounds */
+.gradient-blue { background: linear-gradient(135deg,#3b82f6,#2563eb); }
+.gradient-green { background: linear-gradient(135deg,#10b981,#059669); }
+.gradient-yellow { background: linear-gradient(135deg,#facc15,#eab308); }
+.gradient-purple { background: linear-gradient(135deg,#9333ea,#7e22ce); }
+.gradient-pink { background: linear-gradient(135deg,#ec4899,#db2777); }
+
+/* ===== Toolbar ===== */
+.toolbar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2563eb;
+  color: #fff;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.add-btn:hover { background: #1d4ed8; }
+
+/* ===== Employee Directory ===== */
+.employee-directory {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 20px;
+}
+.employee-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.employee-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+.employee-card h3 {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+.employee-card p {
+  font-size: 14px;
+  color: #4b5563;
+  margin: 4px 0;
+}
+.employee-card strong { color: #111827; }
+
+.actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+.edit-btn, .delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.edit-btn {
+  background: #f3f4f6;
+  color: #2563eb;
+}
+.edit-btn:hover { background: #e0e7ff; }
+.delete-btn {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.delete-btn:hover { background: #fecaca; }
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+.modal {
+  background: #fff;
+  padding: 28px;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeIn 0.3s ease;
+}
+.modal h2 {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.modal input, .modal select {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+}
+.modal input:focus, .modal select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+  outline: none;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.save-btn {
+  background: #2563eb;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+.save-btn:hover { background: #1d4ed8; }
+.cancel-btn {
+  background: #f3f4f6;
+  color: #111827;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+.cancel-btn:hover { background: #e5e7eb; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

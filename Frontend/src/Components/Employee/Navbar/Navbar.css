@@ -1,0 +1,83 @@
+/* Import Material Symbols */
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 200px; /* adjust to your sidebar width */
+  right: 0;
+  height: 70px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 25px;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  z-index: 1000;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* Left section */
+.navbar-left h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0a66c2;
+}
+
+.navbar-left p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: #555;
+}
+
+/* Center search bar */
+.navbar-center {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.search-bar {
+  width: 350px;
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.search-bar:focus {
+  border-color: #0a66c2;
+  box-shadow: 0 0 8px rgba(10,102,194,0.2);
+  outline: none;
+}
+
+/* Right section */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* 2D Material Icon button */
+.icon-btn {
+  background: transparent;
+  border: none;
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 48;
+  font-size: 24px;
+  color: #0a66c2;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.icon-btn:hover {
+  color: #094a8f;
+  transform: scale(1.1);
+}

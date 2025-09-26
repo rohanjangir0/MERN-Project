@@ -1,0 +1,74 @@
+.admin-navbar {
+  height: 70px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.navbar-left h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.navbar-left p {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e5e7eb;
+  padding: 0.45rem 0.8rem;
+  border-radius: 9999px; /* pill shape */
+  background: #f9fafb;
+  transition: border 0.2s ease, background 0.2s ease;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.9rem;
+  color: #111827;
+  width: 160px;
+}
+
+.search-box input::placeholder {
+  color: #9ca3af;
+}
+
+.search-box:hover {
+  background: #ffffff;
+  border-color: #d1d5db;
+}
+
+.search-icon {
+  color: #6b7280;
+}
+
+.settings-btn {
+  cursor: pointer;
+  color: #374151;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.settings-btn:hover {
+  color: #111827;
+  transform: rotate(90deg);
+}

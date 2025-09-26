@@ -1,0 +1,104 @@
+/* Sidebar container */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  transition: width 0.3s;
+}
+
+/* Main content shift */
+.main-content {
+  margin-left: 200px;
+  padding: 20px;
+}
+
+/* Header */
+.sidebar-header {
+  padding: 25px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.sidebar-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0a66c2;
+  margin: 0;
+}
+
+.sidebar-header p {
+  font-size: 13px;
+  font-weight: 400;
+  color: #555;
+  margin-top: 4px;
+}
+
+/* Nav links */
+.sidebar-nav {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 0;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #333;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.sidebar-nav a .material-symbols-outlined {
+  margin-right: 12px;
+  font-size: 22px;
+  color: #0a66c2;
+}
+
+/* Hover effect */
+.sidebar-nav a:hover {
+  background: #eef6ff;
+  padding-left: 25px; /* subtle hover slide effect */
+  box-shadow: inset 5px 0 0 #0a66c2;
+}
+
+/* Active link */
+.sidebar-nav .active {
+  background: #d0e5ff;
+  font-weight: 600;
+  color: #0a66c2;
+  padding-left: 25px;
+  box-shadow: inset 5px 0 0 #0a66c2;
+}
+
+/* Footer logout */
+.sidebar-footer {
+  padding: 20px;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 10px 0;
+  background: #0a66c2;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: #094a8f;
+}
