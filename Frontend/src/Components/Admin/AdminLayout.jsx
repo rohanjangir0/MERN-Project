@@ -1,18 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar/AdminSidebar";
 import AdminNavbar from "./AdminNavbar/AdminNavbar";
-import "./adminLayout.css"; // new file for layout styling
+import "./adminLayout.css";
 
 const AdminLayout = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <AdminSidebar />
-
-      {/* Main Area */}
+      <AdminSidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       <div className="main-content">
-        <AdminNavbar />
+        <AdminNavbar toggleSidebar={toggleSidebar} />
         <div className="page-content">
           <Outlet />
         </div>

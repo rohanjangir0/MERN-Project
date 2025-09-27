@@ -2,65 +2,38 @@
   display: flex;
   height: 100vh;
   width: 100%;
+  overflow: hidden; /* prevents outer scrollbar */
 }
 
-/* Sidebar fixed on the left */
-.admin-layout > .admin-sidebar {
-  width: 250px;
-  flex-shrink: 0;
-  border-right: 1px solid #e5e7eb;
-  background: #fff;
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-}
-
-/* Main section beside the sidebar */
 .main-content {
-  margin-left: 250px; /* match sidebar width */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  width: calc(100% - 250px);
+  margin-left: 250px;
   background: #f9fafb;
   height: 100vh;
-  overflow: hidden;
-  transform: translateY(-1.5em);
+  overflow: hidden; /* hide scroll on main content */
+  transition: margin-left 0.3s ease;
 }
 
-/* Navbar sticks at the top */
-.main-content > header {
-  height: 70px;
-  border-bottom: 2px solid #e5e7eb;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  flex-shrink: 0;
-}
-
-/* Page content area scrolls */
 .page-content {
   flex-grow: 1;
-  overflow-y: auto;
+  overflow-y: scroll; /* allow scrolling but hide scrollbar visually */
   padding: 20px;
-}
-.admin-layout {
-  display: flex;
-  height: 100vh;
-  width: 100%;
+  background: #f9fafb;
+
+  /* hide scrollbar for different browsers */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
 }
 
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* so dashboard scrolls inside this area */
+.page-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
-.page-content {
-  flex: 1;
-  overflow-y: auto; /* scrollable dashboard content */
-  padding: 20px;
-  background: #f9f9f9;
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
 }

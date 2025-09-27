@@ -1,74 +1,86 @@
 .admin-navbar {
-  height: 70px;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
-}
-
-.navbar-left h2 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-}
-
-.navbar-left p {
-  font-size: 0.85rem;
-  color: #6b7280;
-  margin: 0;
-}
-
-.navbar-right {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 60px;
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0 1rem;
+  z-index: 1100;
+
+  /* Comfy blur background */
+  background: rgba(255, 255, 255, 0.15); /* semi-transparent */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px; /* optional rounded edges */
+  box-shadow: 0 4px 30px rgba(0,0,0,0.1);
 }
 
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid #e5e7eb;
-  padding: 0.45rem 0.8rem;
-  border-radius: 9999px; /* pill shape */
-  background: #f9fafb;
-  transition: border 0.2s ease, background 0.2s ease;
-}
-
-.search-box input {
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 0.9rem;
-  color: #111827;
-  width: 160px;
-}
-
-.search-box input::placeholder {
-  color: #9ca3af;
-}
-
-.search-box:hover {
-  background: #ffffff;
-  border-color: #d1d5db;
-}
-
-.search-icon {
-  color: #6b7280;
-}
-
-.settings-btn {
+.mobile-hamburger {
+  display: none;
+  font-size: 1.5rem;
   cursor: pointer;
-  color: #374151;
-  transition: transform 0.2s ease, color 0.2s ease;
+  background: none;
+  border: none;
+  color: #111827;
 }
 
-.settings-btn:hover {
-  color: #111827;
-  transform: rotate(90deg);
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.user-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .mobile-hamburger {
+    display: block;
+  }
+}
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  flex: 1; /* fill remaining height */
+  overflow-y: visible; /* no separate scroll */
+}
+.admin-navbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0 1rem;
+  z-index: 1100;
+
+  /* Comfy blur background */
+  background: rgba(255, 255, 255, 0.15); 
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0; /* full width, no rounding on mobile */
+  box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+
+  /* Hide navbar by default on desktop */
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-navbar {
+    display: flex; /* show only on mobile */
+  }
 }

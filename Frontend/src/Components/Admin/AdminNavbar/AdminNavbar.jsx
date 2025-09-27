@@ -1,24 +1,22 @@
 import React from "react";
-import { Search, Settings } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import "./AdminNavbar.css";
 
-export default function AdminNavbar() {
+export default function AdminNavbar({ toggleSidebar, handleLogout }) {
   return (
-    <header className="admin-navbar">
-      {/* Left: Title */}
-      <div className="navbar-left">
-        <h2>Employee Management</h2>
-        <p>Admin Management Portal</p>
-      </div>
+    <div className="admin-navbar">
+      {/* Hamburger for mobile */}
+      <button className="mobile-hamburger" onClick={toggleSidebar}>
+        ☰
+      </button>
 
-      {/* Right: Search + Settings */}
-      <div className="navbar-right">
-        <div className="search-box">
-          <Search size={16} className="search-icon" />
-          <input type="text" placeholder="Search..." />
-        </div>
-        <Settings className="settings-btn" size={20} />
+      {/* Minimal user actions on the right */}
+      <div className="user-actions">
+        <Settings size={20} />
+        <button onClick={handleLogout} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }}>
+          <LogOut size={18} />
+        </button>
       </div>
-    </header>
+    </div>
   );
 }
