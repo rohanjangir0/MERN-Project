@@ -13,21 +13,28 @@ export default function EmployeeManagement() {
     phone: "",
     department: "",
     status: "Active",
+    password: "",
   });
 
   // Load employees
+  const fetchEmployees = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/employees");
+      setEmployees(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/employees")
-      .then((res) => setEmployees(res.data))
-      .catch((err) => console.error(err));
+    fetchEmployees();
   }, []);
 
   // Save / Update Employee
   const handleSave = async () => {
     try {
       if (editingEmployee) {
-        // Update
+        // Update employee
         const res = await axios.put(
           `http://localhost:5000/api/employees/${editingEmployee._id}`,
           formData
@@ -39,21 +46,32 @@ export default function EmployeeManagement() {
         );
         setEditingEmployee(null);
       } else {
-        // Add
+        // Add employee
+        if (!formData.password) {
+          alert("Password is required for new employee");
+          return;
+        }
+
         const res = await axios.post(
           "http://localhost:5000/api/employees/add",
           formData
         );
-        setEmployees([
-          ...employees,
-          { ...res.data.employee, password: res.data.rawPassword },
-        ]);
+        setEmployees([...employees, res.data.employee]);
       }
 
-      setFormData({ name: "", email: "", phone: "", department: "", status: "Active" });
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        department: "",
+        status: "Active",
+        password: "",
+      });
       setShowModal(false);
     } catch (err) {
-      alert(err.response?.data?.message || "Operation failed");
+      const errorMessage =
+        err.response?.data?.error || "Operation failed";
+      alert(errorMessage);
     }
   };
 
@@ -77,6 +95,7 @@ export default function EmployeeManagement() {
       phone: emp.phone,
       department: emp.department,
       status: emp.status,
+      password: "", // leave blank on edit
     });
     setShowModal(true);
   };
@@ -92,8 +111,8 @@ export default function EmployeeManagement() {
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter((e) => e.status === "Active").length;
   const onLeave = employees.filter((e) => e.status === "On Leave").length;
-  const avgPerformance = 85; // dummy placeholder (could be fetched later)
-  const avgAttendance = 92; // dummy placeholder
+  const avgPerformance = 85; // placeholder
+  const avgAttendance = 92; // placeholder
 
   return (
     <div className="employee-management">
@@ -141,7 +160,7 @@ export default function EmployeeManagement() {
             <p><strong>ID:</strong> {emp.employeeId}</p>
             <p><strong>Joined:</strong> {new Date(emp.joinDate).toLocaleDateString()}</p>
             <p>
-              <strong>Password:</strong> {emp.password || "Hidden"}{" "}
+              <strong>Password:</strong> {"Hidden"}
               {emp.password && (
                 <button onClick={() => copyToClipboard(emp.password)}>
                   <FaClipboard />
@@ -170,39 +189,37 @@ export default function EmployeeManagement() {
               type="text"
               placeholder="Name"
               value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
             <input
               type="email"
               placeholder="Email"
               value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
             <input
               type="text"
               placeholder="Phone"
               value={formData.phone}
-              onChange={(e) =>
-                setFormData({ ...formData, phone: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
             <input
               type="text"
               placeholder="Department"
               value={formData.department}
-              onChange={(e) =>
-                setFormData({ ...formData, department: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
             />
+            {!editingEmployee && (
+              <input
+                type="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+            )}
             <select
               value={formData.status}
-              onChange={(e) =>
-                setFormData({ ...formData, status: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             >
               <option value="Active">Active</option>
               <option value="On Leave">On Leave</option>

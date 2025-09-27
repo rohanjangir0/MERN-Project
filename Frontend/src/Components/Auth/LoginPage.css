@@ -166,3 +166,38 @@
   .login-page .portal-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .login-page .portal-card { min-height: 100px; padding: 14px; }
 }
+/* Demo button styling */
+.login-page .btn-demo {
+  width: 100%;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  color: #fff;
+  border: none;
+  height: 44px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(16,185,129,0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.login-page .btn-demo:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(16,185,129,0.35);
+}
+
+/* Forgot password / links */
+.login-page .form-links {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.login-page .form-links .link-muted {
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+

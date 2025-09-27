@@ -30,6 +30,9 @@ const documentRoutes = require("./src/routes/documentRoutes");
 
 // Models
 const Message = require("./src/models/Message");
+// const employeeRoutes = require("./routes/employeeRoutes");n
+app.use("/api/employees", employeeRoutes);
+
 
 // ✅ Create HTTP server
 const server = http.createServer(app);

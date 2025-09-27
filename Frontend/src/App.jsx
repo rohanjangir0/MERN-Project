@@ -16,8 +16,13 @@ axios.defaults.baseURL = "https://mern-project-v3eg.onrender.com/api";
 function App() {
   return (
     <Routes>
+      {/* Login Page */}
       <Route path="/" element={<LoginPage />} />
 
+      {/* Reset Password Page */}
+      <Route path="/reset-password/:token" element={<LoginPage />} />
+
+      {/* Employee routes */}
       <Route
         path="/employee/*"
         element={
@@ -31,6 +36,7 @@ function App() {
         ))}
       </Route>
 
+      {/* Admin routes */}
       <Route
         path="/admin/*"
         element={
