@@ -13,7 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Serve uploaded files from backend/uploads
+// Serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Import routes
@@ -27,22 +27,38 @@ const messageRoutes = require("./src/routes/message");
 const adminLeaveRoutes = require("./src/routes/adminLeaveRoutes");
 const attendanceRoutes = require("./src/routes/attendanceRoutes");
 const documentRoutes = require("./src/routes/documentRoutes");
-const clientRoutes = require("./src/routes/clientRoutes"); // adjust path if needed
-
+const clientRoutes = require("./src/routes/clientRoutes");
+const projectRoutes = require("./src/routes/projectRoutes"); // New Project Requests routes
 
 // Models
 const Message = require("./src/models/Message");
-// const employeeRoutes = require("./routes/employeeRoutes");n
+
+// Register API routes
+app.use("/api/auth", authRouter);
+app.use("/api/leaves", leavesRouter);
 app.use("/api/employees", employeeRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/announcements", announcementRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/admin/leaves", adminLeaveRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/documents", documentRoutes);
+app.use("/api/clients", clientRoutes);
+app.use("/api/projects", projectRoutes); // New project request API
 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
-// ✅ Create HTTP server
+// Create HTTP server
 const server = http.createServer(app);
 
-// ✅ Attach socket.io
+// Attach socket.io
 const io = new Server(server, {
   cors: {
-    origin: "*", // change to your frontend URL in production
+    origin: "*", // change to frontend URL in production
     methods: ["GET", "POST"],
   },
 });
@@ -53,10 +69,10 @@ let onlineUsers = new Map();
 io.on("connection", (socket) => {
   console.log("✅ New connection:", socket.id);
 
-  // Register user when they connect
+  // Register user
   socket.on("register", (user) => {
     onlineUsers.set(user.id, socket.id);
-    io.emit("userList", Array.from(onlineUsers.keys())); // broadcast online users
+    io.emit("userList", Array.from(onlineUsers.keys()));
   });
 
   // Handle sending messages
@@ -64,21 +80,16 @@ io.on("connection", (socket) => {
     const { senderId, receiverId, text } = data;
 
     try {
-      // ✅ Save to MongoDB
       const newMsg = new Message({ senderId, receiverId, text });
       await newMsg.save();
 
-      // ✅ Emit to receiver if online
+      // Emit to receiver
       const receiverSocketId = onlineUsers.get(receiverId);
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("receiveMessage", newMsg);
-      }
+      if (receiverSocketId) io.to(receiverSocketId).emit("receiveMessage", newMsg);
 
-      // ✅ Emit back to sender (so sender UI updates instantly)
+      // Emit back to sender
       const senderSocketId = onlineUsers.get(senderId);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("receiveMessage", newMsg);
-      }
+      if (senderSocketId) io.to(senderSocketId).emit("receiveMessage", newMsg);
     } catch (err) {
       console.error("❌ Error saving message:", err);
     }
@@ -97,32 +108,14 @@ io.on("connection", (socket) => {
   });
 });
 
-// REST API routes
-app.use("/api/auth", authRouter);
-app.use("/api/leaves", leavesRouter);
-app.use("/api/employees", employeeRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("/api/announcements", announcementRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/admin/leaves", adminLeaveRoutes);
-app.use("/api/attendance", attendanceRoutes);
-app.use("/api/documents", documentRoutes);
-app.use("/api/clients", clientRoutes);
-
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
-});
-
-// ✅ Connect DB & start server
+// Connect DB & start server
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
-    server.listen(process.env.PORT || 5000, () => {
-      console.log(`🚀 Server running on port ${process.env.PORT || 5000}`);
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   })
   .catch((err) => console.error("❌ MongoDB connection error:", err));

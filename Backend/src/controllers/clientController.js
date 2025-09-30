@@ -1,25 +1,6 @@
 const Client = require("../models/Client");
 const jwt = require("jsonwebtoken");
-
-// Dummy clients (replace later with DB)
-let clients = [
-  {
-    id: 1,
-    name: "Emily Rodriguez",
-    email: "emily@techcorp.com",
-    company: "TechCorp Solutions",
-    loginId: "emi4821",
-    passwordHash: "Abc123@!" // for demo only, plain text
-  },
-  {
-    id: 2,
-    name: "John Doe",
-    email: "john@business.com",
-    company: "Business Inc.",
-    loginId: "joh1234",
-    passwordHash: "Xyz987@!"
-  }
-];
+const bcrypt = require("bcryptjs"); // for password hashing
 
 // Generate JWT token
 const generateToken = (id) => {
@@ -27,65 +8,103 @@ const generateToken = (id) => {
 };
 
 // @desc Get all clients
-const getClients = (req, res) => {
-  res.json(clients);
+const getClients = async (req, res) => {
+  try {
+    const clients = await Client.find().select("-passwordHash");
+    res.json(clients);
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 // @desc Get client by ID
-const getClientById = (req, res) => {
-  const client = clients.find((c) => c.id === parseInt(req.params.id));
-  if (client) res.json(client);
-  else res.status(404).json({ message: "Client not found" });
+const getClientById = async (req, res) => {
+  try {
+    const client = await Client.findById(req.params.id).select("-passwordHash");
+    if (!client) return res.status(404).json({ message: "Client not found" });
+    res.json(client);
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 // @desc Add client
-const addClient = (req, res) => {
-  const { name, email, company, loginId, password } = req.body;
-  if (!name || !email || !company || !loginId || !password) {
-    return res.status(400).json({ message: "Please provide all fields" });
+const addClient = async (req, res) => {
+  try {
+    const { name, email, company, loginId, password } = req.body;
+    if (!name || !loginId || !password) return res.status(400).json({ message: "Please provide required fields" });
+
+    // Check if loginId already exists
+    const exists = await Client.findOne({ loginId });
+    if (exists) return res.status(400).json({ message: "Login ID already exists" });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const newClient = await Client.create({ name, email, company, loginId, passwordHash });
+    res.status(201).json({
+      id: newClient._id,
+      name: newClient.name,
+      loginId: newClient.loginId,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
   }
-  const newClient = { id: clients.length + 1, name, email, company, loginId, passwordHash: password };
-  clients.push(newClient);
-  res.status(201).json(newClient);
 };
 
 // @desc Update client
-const updateClient = (req, res) => {
-  const client = clients.find((c) => c.id === parseInt(req.params.id));
-  if (client) {
-    client.name = req.body.name || client.name;
-    client.email = req.body.email || client.email;
-    client.company = req.body.company || client.company;
-    res.json(client);
-  } else res.status(404).json({ message: "Client not found" });
+const updateClient = async (req, res) => {
+  try {
+    const client = await Client.findById(req.params.id);
+    if (!client) return res.status(404).json({ message: "Client not found" });
+
+    const { name, email, company, password } = req.body;
+
+    if (name) client.name = name;
+    if (email) client.email = email;
+    if (company) client.company = company;
+    if (password) client.passwordHash = await bcrypt.hash(password, 10);
+
+    await client.save();
+    res.json({ message: "Client updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 // @desc Delete client
-const deleteClient = (req, res) => {
-  const index = clients.findIndex((c) => c.id === parseInt(req.params.id));
-  if (index !== -1) {
-    const deleted = clients.splice(index, 1);
-    res.json({ message: "Client removed", client: deleted });
-  } else res.status(404).json({ message: "Client not found" });
+const deleteClient = async (req, res) => {
+  try {
+    const client = await Client.findByIdAndDelete(req.params.id);
+    if (!client) return res.status(404).json({ message: "Client not found" });
+    res.json({ message: "Client deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 // @desc Client login
-const loginClient = (req, res) => {
-  const { loginId, password } = req.body;
-  if (!loginId || !password) return res.status(400).json({ message: "Please provide loginId and password" });
+const loginClient = async (req, res) => {
+  try {
+    const { loginId, password } = req.body;
+    if (!loginId || !password) return res.status(400).json({ message: "Please provide loginId and password" });
 
-  const client = clients.find((c) => c.loginId === loginId);
-  if (!client) return res.status(401).json({ message: "Invalid credentials" });
+    const client = await Client.findOne({ loginId });
+    if (!client) return res.status(401).json({ message: "Invalid credentials" });
 
-  if (client.passwordHash !== password) return res.status(401).json({ message: "Invalid credentials" });
+    const isMatch = await bcrypt.compare(password, client.passwordHash);
+    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
-  const token = generateToken(client.id);
-  res.json({
-    token,
-    name: client.name,
-    clientId: client.id,
-    loginId: client.loginId
-  });
+    const token = generateToken(client._id);
+
+    res.json({
+      token,
+      name: client.name,
+      clientId: client._id,
+      loginId: client.loginId,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 module.exports = {
@@ -94,5 +113,5 @@ module.exports = {
   addClient,
   updateClient,
   deleteClient,
-  loginClient
+  loginClient,
 };
