@@ -1,0 +1,134 @@
+.client-sidebar {
+  width: 260px;
+  background: #fff;
+  border-right: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.client-sidebar-header {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  gap: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.client-sidebar-logo {
+  background: linear-gradient(135deg, #6a5af9, #7b83ff);
+  color: white;
+  font-size: 20px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.client-sidebar-title {
+  font-size: 18px;
+  margin: 0;
+  font-weight: bold;
+}
+
+.client-sidebar-subtitle {
+  font-size: 13px;
+  color: gray;
+  margin: 0;
+}
+
+.client-sidebar-menu {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.client-sidebar-menu li {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  font-size: 15px;
+  color: #555;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.client-sidebar-menu li .icon {
+  margin-right: 10px;
+}
+
+.client-sidebar-menu li:hover {
+  background: #f9f9f9;
+}
+
+.client-sidebar-menu li.active {
+  background: #f0f2f7;
+  font-weight: bold;
+}
+
+.client-sidebar-menu li.with-badge {
+  justify-content: space-between;
+}
+
+.badge {
+  background: red;
+  color: white;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.client-sidebar-footer {
+  border-top: 1px solid #f0f0f0;
+  padding: 15px 20px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #6a5af9, #7b83ff);
+  color: white;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.user-name {
+  font-weight: bold;
+  margin: 0;
+}
+
+.user-role {
+  font-size: 13px;
+  color: gray;
+  margin: 0;
+}
+
+.logout-btn {
+  width: 100%;
+  background: #f9f9f9;
+  border: none;
+  padding: 10px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.logout-btn .icon {
+  margin-right: 8px;
+}
+
+.logout-btn:hover {
+  background: #eee;
+}

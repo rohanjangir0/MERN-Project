@@ -27,6 +27,8 @@ const messageRoutes = require("./src/routes/message");
 const adminLeaveRoutes = require("./src/routes/adminLeaveRoutes");
 const attendanceRoutes = require("./src/routes/attendanceRoutes");
 const documentRoutes = require("./src/routes/documentRoutes");
+const clientRoutes = require("./src/routes/clientRoutes"); // adjust path if needed
+
 
 // Models
 const Message = require("./src/models/Message");
@@ -106,6 +108,8 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/admin/leaves", adminLeaveRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/clients", clientRoutes);
+
 
 // 404 handler
 app.use((req, res) => {

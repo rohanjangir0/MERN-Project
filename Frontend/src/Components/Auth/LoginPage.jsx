@@ -12,6 +12,7 @@ const portals = [
   { id: "client", title: "Client", subtitle: "Project status & reports", icon: <FaUsers /> },
 ];
 
+// 🔹 Role mapping for backend
 const roleMap = { admin: "Admin", superadmin: "SuperAdmin", client: "Client" };
 
 export default function LoginPage() {
@@ -47,22 +48,37 @@ export default function LoginPage() {
     setMode("login");
   };
 
+  // 🔹 LOGIN HANDLER (Dynamic by role)
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       let res;
+
       if (selectedPortal === "employee") {
         res = await axios.post("http://localhost:5000/api/employees/login", {
           employeeId: identifier,
           password,
         });
         localStorage.setItem("token", res.data.token);
-        localStorage.setItem("role", res.data.role);
+        localStorage.setItem("role", "Employee");
         localStorage.setItem("name", res.data.name);
         localStorage.setItem("employeeId", res.data.employeeId);
         navigate("/employee/dashboard");
-      } else {
+      } 
+      else if (selectedPortal === "client") {
+        res = await axios.post("http://localhost:5000/api/clients/login", {
+          loginId: identifier, // ✅ use loginId instead of email
+          password,
+        });
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("role", "Client");
+        localStorage.setItem("name", res.data.name);
+        localStorage.setItem("clientId", res.data.clientId);
+        navigate("/client/dashboard");
+      }
+      else {
+        // Admin & SuperAdmin use common endpoint
         res = await axios.post("http://localhost:5000/api/auth/login", {
           email: identifier,
           password,
@@ -72,10 +88,10 @@ export default function LoginPage() {
         localStorage.setItem("role", res.data.role);
         localStorage.setItem("name", res.data.name);
         localStorage.setItem("department", res.data.department);
+
         const role = res.data.role?.toLowerCase();
         if (role === "admin") navigate("/admin/dashboard");
         else if (role === "superadmin") navigate("/superadmin/dashboard");
-        else if (role === "client") navigate("/client/dashboard");
         else navigate("/");
       }
     } catch (err) {
@@ -85,11 +101,13 @@ export default function LoginPage() {
     }
   };
 
+  // 🔹 FORGOT PASSWORD
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/employees/forgot-password", {
+      await axios.post("http://localhost:5000/api/auth/forgot-password", {
         email: resetEmail,
+        role: roleMap[selectedPortal] || "Employee",
       });
       alert("Password reset link sent to your email");
       setMode("login");
@@ -99,11 +117,13 @@ export default function LoginPage() {
     }
   };
 
+  // 🔹 RESET PASSWORD
   const handleResetPassword = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`http://localhost:5000/api/employees/reset-password/${resetToken}`, {
+      await axios.post(`http://localhost:5000/api/auth/reset-password/${resetToken}`, {
         newPassword,
+        role: roleMap[selectedPortal] || "Employee",
       });
       alert("Password updated successfully!");
       setMode("login");
@@ -155,10 +175,22 @@ export default function LoginPage() {
                 <p className="subtitle">Secure sign-in for {currentPortal.title.toLowerCase()}</p>
                 <form onSubmit={handleLogin}>
                   <div className="form-group">
-                    <label>{selectedPortal === "employee" ? "Employee ID" : "Email address"}</label>
+                    <label>
+                      {selectedPortal === "employee"
+                        ? "Employee ID"
+                        : selectedPortal === "client"
+                        ? "Login ID"
+                        : "Email address"}
+                    </label>
                     <input
-                      type={selectedPortal === "employee" ? "text" : "email"}
-                      placeholder={selectedPortal === "employee" ? "EMP-123456" : "name@company.com"}
+                      type="text"
+                      placeholder={
+                        selectedPortal === "employee"
+                          ? "EMP-123456"
+                          : selectedPortal === "client"
+                          ? "client1234"
+                          : "name@company.com"
+                      }
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       required
@@ -190,7 +222,7 @@ export default function LoginPage() {
                             setIdentifier("superadmin@company.com");
                             setPassword("SuperAdmin@123");
                           } else if (selectedPortal === "client") {
-                            setIdentifier("client@company.com");
+                            setIdentifier("client1234"); // updated demo loginId
                             setPassword("Client@123");
                           }
                         }}

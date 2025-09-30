@@ -53,6 +53,9 @@ export default function AdminSidebar({ sidebarOpen, toggleSidebar }) {
           <NavLink to="/admin/analytics" className="nav-link">
             <BarChart3 size={18} /> Analytics & Reports
           </NavLink>
+          <NavLink to="/admin/client-management" className="nav-link">
+            <Settings size={18} /> Client Managment
+          </NavLink>
           <NavLink to="/admin/settings" className="nav-link">
             <Settings size={18} /> Settings
           </NavLink>
@@ -61,7 +64,7 @@ export default function AdminSidebar({ sidebarOpen, toggleSidebar }) {
         <div className="sidebar-user">
           <div className="user-avatar">SJ</div>
           <div className="user-info">
-            <h4>Sarah Johnson</h4>
+            <h4>Rohan Jangir</h4>
             <p>HR Manager • HR</p>
           </div>
         </div>
