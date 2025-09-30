@@ -5,13 +5,13 @@ import ClientNavbar from "./ClientNavbar/ClientNavbar";
 import "./clientLayout.css";
 
 const ClientLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
     <div className="client-layout">
-      <ClientSidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-      <div className="main-content">
+      <ClientSidebar sidebarOpen={sidebarOpen} />
+      <div className={`main-content ${sidebarOpen ? "sidebar-open" : ""}`}>
         <ClientNavbar toggleSidebar={toggleSidebar} />
         <div className="page-content">
           <Outlet />

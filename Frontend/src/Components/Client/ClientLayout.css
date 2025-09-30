@@ -2,33 +2,32 @@
   display: flex;
   height: 100vh;
   width: 100%;
-  overflow: hidden; /* prevents outer scrollbar */
 }
 
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin-left: 250px;
-  background: #f9fafb;
-  height: 100vh;
-  overflow: hidden; /* hide scroll on main content */
+  margin-left: 0;
   transition: margin-left 0.3s ease;
+}
+
+.main-content.sidebar-open {
+  margin-left: 260px; /* match sidebar width */
 }
 
 .page-content {
   flex-grow: 1;
-  overflow-y: scroll; /* allow scrolling */
+  overflow-y: scroll;
   padding: 20px;
   background: #f9fafb;
 
-  /* hide scrollbar */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
 
 .page-content::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
 @media (max-width: 768px) {

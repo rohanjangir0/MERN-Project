@@ -1,6 +1,6 @@
 import ClientDashboard from "./ClientDashboard/ClientDashboard";
-// import RequestProject from "./RequestProject/RequestProject";
-// import Proposals from "./Proposals/Proposals";
+import ProjectRequest from "./ProjectRequest/ProjectRequest";
+import ProjectProposals from "./ProjectProposals/ProjectProposals";
 // import Communication from "./Communication/Communication";
 // import Schedule from "./Schedule/Schedule";
 // import Documents from "./Documents/Documents";
@@ -8,10 +8,10 @@ import ClientDashboard from "./ClientDashboard/ClientDashboard";
 
 export const clientRoutes = [
   { path: "dashboard", element: <ClientDashboard /> },
-//   { path: "request-project", element: <RequestProject /> },
-//   { path: "proposals", element: <Proposals /> },
-//   { path: "communication", element: <Communication /> },
-//   { path: "schedule", element: <Schedule /> },
-//   { path: "documents", element: <Documents /> },
-//   { path: "settings", element: <ClientSettings /> },
-  ]
+  { path: "project-request", element: <ProjectRequest /> },
+  { path: "proposals", element: <ProjectProposals /> },
+  // { path: "communication", element: <Communication /> },
+  // { path: "schedule", element: <Schedule /> },
+  // { path: "documents", element: <Documents /> },
+  // { path: "settings", element: <ClientSettings /> },
+];

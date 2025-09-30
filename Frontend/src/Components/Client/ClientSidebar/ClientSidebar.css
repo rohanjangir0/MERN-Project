@@ -7,8 +7,19 @@
   justify-content: space-between;
   height: 100vh;
   font-family: Arial, sans-serif;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  transition: transform 0.3s ease;
+  z-index: 100;
 }
 
+.client-sidebar.closed {
+  transform: translateX(-100%);
+}
+
+/* Header */
 .client-sidebar-header {
   display: flex;
   align-items: center;
@@ -37,6 +48,7 @@
   margin: 0;
 }
 
+/* Menu */
 .client-sidebar-menu {
   list-style: none;
   padding: 10px 0;
@@ -80,6 +92,7 @@
   border-radius: 12px;
 }
 
+/* Footer */
 .client-sidebar-footer {
   border-top: 1px solid #f0f0f0;
   padding: 15px 20px;

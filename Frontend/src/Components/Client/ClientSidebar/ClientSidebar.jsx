@@ -1,4 +1,5 @@
 import React from "react";
+import { Link, useLocation } from "react-router-dom";
 import "./ClientSidebar.css";
 import {
   FaTachometerAlt,
@@ -11,9 +12,14 @@ import {
   FaPlus,
 } from "react-icons/fa";
 
-const ClientSidebar = () => {
+const ClientSidebar = ({ sidebarOpen }) => {
+  const location = useLocation(); // to know current route
+
+  // Helper to check if link is active
+  const isActive = (path) => location.pathname === `/client/${path}`;
+
   return (
-    <div className="client-sidebar">
+    <div className={`client-sidebar ${sidebarOpen ? "open" : "closed"}`}>
       {/* Header */}
       <div className="client-sidebar-header">
         <div className="client-sidebar-logo">👥</div>
@@ -25,27 +31,27 @@ const ClientSidebar = () => {
 
       {/* Menu */}
       <ul className="client-sidebar-menu">
-        <li className="active">
-          <FaTachometerAlt className="icon" /> Dashboard
+        <li className={isActive("dashboard") ? "active" : ""}>
+          <Link to="/client/dashboard">
+            <FaTachometerAlt className="icon" /> Dashboard
+          </Link>
         </li>
-        <li>
-          <FaPlus className="icon" /> Request Project
+        <li className={isActive("project-request") ? "active" : ""}>
+          <Link to="/client/project-request">
+            <FaPlus className="icon" /> Request Project
+          </Link>
         </li>
-        <li>
-          <FaFileAlt className="icon" /> Proposals
+        {/* Add other links when routes are ready */}
+        <li className={isActive("proposals") ? "active" : ""}>
+          <Link to="/client/proposals">
+            <FaFileAlt className="icon" /> Proposals
+          </Link>
         </li>
-        <li className="with-badge">
-          <FaComments className="icon" /> Communication
-          <span className="badge">3</span>
-        </li>
-        <li>
-          <FaCalendarAlt className="icon" /> Schedule
-        </li>
-        <li>
-          <FaDownload className="icon" /> Documents
-        </li>
-        <li>
-          <FaCog className="icon" /> Settings
+        <li className={isActive("communication") ? "active" : ""}>
+          <Link to="/client/communication">
+            <FaComments className="icon" /> Communication
+            <span className="badge">3</span>
+          </Link>
         </li>
       </ul>
 

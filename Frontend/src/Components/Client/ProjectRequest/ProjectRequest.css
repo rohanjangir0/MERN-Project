@@ -1,0 +1,366 @@
+/* ProjectRequest.css - Modern Multi-step Form UI */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  background: #f0f2f5;
+  color: #1a1a1a;
+}
+
+.container {
+  min-height: 100vh;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.form-wrapper {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  max-width: 1200px;
+  width: 100%;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.step-indicator {
+  background: #e3f2fd;
+  color: #2196F3;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* Card Layout */
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  padding: 30px;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+  margin-bottom: 20px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* Form Groups */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group label {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+/* Inputs */
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea,
+.form-group select {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  font-size: 15px;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: #2196F3;
+  background: #fff;
+  outline: none;
+}
+
+textarea { resize: vertical; }
+
+/* Option Grid */
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.option-btn {
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.option-btn:hover {
+  border-color: #2196F3;
+  transform: translateY(-2px);
+}
+
+.option-btn.selected {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+/* Category Cards */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.category-card {
+  border-radius: 16px;
+  padding: 20px;
+  border: 2px solid #e0e0e0;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.category-card:hover {
+  border-color: #2196F3;
+  transform: translateY(-3px);
+}
+
+.category-card.selected {
+  border-color: #1a1a1a;
+  background: #f9f9f9;
+}
+
+.category-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+/* Sticky Notes */
+.sticky-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sticky-note {
+  flex: 1 1 160px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  background: #fffef6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sticky-note:hover {
+  border-color: #2196F3;
+}
+
+.sticky-note.selected {
+  border-color: #1a1a1a;
+  background: #fff3cd;
+}
+
+.sticky-note strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* Budget Slider */
+.budget-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e0e0e0;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.budget-slider::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.budget-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #757575;
+  margin-top: 8px;
+}
+
+/* Review JSON Box */
+.review-box {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  max-height: 400px;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  white-space: pre-wrap;
+}
+
+/* Footer Buttons */
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-submit {
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #333;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #1a1a1a;
+  border: 2px solid #e0e0e0;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: #2196F3;
+}
+
+.btn-submit {
+  background: #1a1a1a;
+  color: #fff;
+  margin-top: 20px;
+}
+
+.btn-submit:hover {
+  background: #333;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .category-grid,
+  .option-grid,
+  .sticky-notes {
+    grid-template-columns: 1fr !important;
+  }
+  .form-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+/* Step 2 - Requirements */
+.budget-group {
+  margin-bottom: 20px;
+}
+.budget-slider {
+  width: 100%;
+  accent-color: #2196F3;
+}
+.budget-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 5px;
+}
+
+.priority-cards {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.priority-card {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  border-radius: 12px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+.priority-card.selected {
+  border-color: #2196F3;
+  background-color: #e3f2fd;
+}
+.priority-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.team-size-input {
+  width: 80px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 10px;
+  border: 2px solid #2196F3;
+}
