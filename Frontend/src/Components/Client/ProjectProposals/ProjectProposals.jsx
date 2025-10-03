@@ -1,54 +1,37 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./ProjectProposals.css";
 
 export default function ProjectProposals() {
   const [projects, setProjects] = useState([]);
   const [filter, setFilter] = useState("All");
 
-  // Mock data (replace with API later)
+  // Fetch projects from backend
+  const fetchProjects = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/projects");
+      // Map backend fields to match the UI
+      const formattedProjects = res.data.map((p) => ({
+        id: p._id,
+        title: p.projectTitle,
+        description: p.projectDescription,
+        budget: `₹${p.budget.toLocaleString()}`,
+        status: "Submitted", // You can later add real status field in DB
+        date: new Date(p.createdAt).toLocaleDateString(),
+        timeline: p.timeline,
+        priority: p.priority,
+        features: p.coreFeatures.length,
+        platforms: p.platforms.length,
+        integrations: p.integrations.length,
+      }));
+      setProjects(formattedProjects);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    const mockData = [
-      {
-        id: 1,
-        title: "E-commerce Platform for Fashion Brand",
-        description: "A comprehensive e-commerce solution...",
-        budget: "$75,000",
-        status: "Under Review",
-        date: "2024-01-15",
-        timeline: "3-4 months",
-        priority: "Medium",
-        features: 4,
-        platforms: 1,
-        integrations: 2,
-      },
-      {
-        id: 2,
-        title: "Mobile App for Customer Engagement",
-        description: "A mobile app to enhance engagement...",
-        budget: "$45,000",
-        status: "Approved",
-        date: "2024-01-10",
-        timeline: "2-3 months",
-        priority: "High",
-        features: 3,
-        platforms: 2,
-        integrations: 1,
-      },
-      {
-        id: 3,
-        title: "AI Chatbot for Customer Support",
-        description: "AI-powered chatbot for instant support...",
-        budget: "$30,000",
-        status: "Submitted",
-        date: "2024-01-20",
-        timeline: "1-2 months",
-        priority: "Low",
-        features: 2,
-        platforms: 1,
-        integrations: 1,
-      },
-    ];
-    setProjects(mockData);
+    fetchProjects();
   }, []);
 
   const counts = {
@@ -67,7 +50,7 @@ export default function ProjectProposals() {
     <div className="project-proposals">
       <h2>Project Proposals</h2>
 
-      {/* Filters with counts */}
+      {/* Filters */}
       <div className="filters">
         {Object.entries(counts).map(([key, value]) => (
           <button
