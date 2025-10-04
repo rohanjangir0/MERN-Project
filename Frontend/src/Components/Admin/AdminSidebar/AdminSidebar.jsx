@@ -64,6 +64,11 @@ export default function AdminSidebar({ sidebarOpen, toggleSidebar }) {
             <NavLink to="/admin/leave-approvals" className="adm-nav-link">
               <CalendarCheck2 size={18} /> Leave Approvals
             </NavLink>
+            <NavLink to="/admin/employee-monitoring" className="adm-nav-link">
+              <Users size={18} /> Employee Monitoring
+            </NavLink>
+
+
           </div>
 
           {/* Client Section */}

@@ -13,16 +13,14 @@ export default function Sidebar() {
     { name: "Payroll", icon: "attach_money", path: "/employee/payroll" },
     { name: "Documents", icon: "folder_open", path: "/employee/documents" },
     { name: "Chat", icon: "chat_bubble_outline", path: "/employee/chat" },
+    { name: "Monitoring", icon: "visibility", path: "/employee/employee-monitoring" }, // ✅ New menu
   ];
 
   const handleLogout = () => {
-    // Clear user session
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("name");
     localStorage.removeItem("employeeId");
-
-    // Redirect back to login page (root "/")
     navigate("/");
   };
 

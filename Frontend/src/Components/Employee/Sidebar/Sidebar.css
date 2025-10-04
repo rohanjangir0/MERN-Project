@@ -3,7 +3,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 200px;
+  width: 220px;
   height: 100vh;
   background: #ffffff;
   border-right: 1px solid #e5e5e5;
@@ -12,11 +12,12 @@
   justify-content: space-between;
   font-family: "Inter", "Segoe UI", sans-serif;
   transition: width 0.3s;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.05);
 }
 
 /* Main content shift */
 .main-content {
-  margin-left: 200px;
+  margin-left: 220px;
   padding: 20px;
 }
 
@@ -28,15 +29,14 @@
 
 .sidebar-header h2 {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0a66c2;
   margin: 0;
 }
 
 .sidebar-header p {
   font-size: 13px;
-  font-weight: 400;
-  color: #555;
+  color: #6b7280;
   margin-top: 4px;
 }
 
@@ -52,7 +52,7 @@
   display: flex;
   align-items: center;
   padding: 12px 20px;
-  color: #333;
+  color: #374151;
   text-decoration: none;
   font-size: 15px;
   font-weight: 500;
@@ -69,7 +69,7 @@
 /* Hover effect */
 .sidebar-nav a:hover {
   background: #eef6ff;
-  padding-left: 25px; /* subtle hover slide effect */
+  padding-left: 25px;
   box-shadow: inset 5px 0 0 #0a66c2;
 }
 
@@ -85,6 +85,7 @@
 /* Footer logout */
 .sidebar-footer {
   padding: 20px;
+  border-top: 1px solid #eee;
 }
 
 .logout-btn {

@@ -116,6 +116,33 @@
   background: rgba(0, 0, 0, 0.3);
   z-index: 1100;
 }
+/* Special styling for Employee Monitoring link */
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.6rem;
+  color: #1e3a8a; /* darker blue to stand out */
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: background 0.2s, transform 0.2s;
+  font-weight: 600;
+}
+
+.admin-nav-link:hover {
+  background: #dbeafe; /* light blue hover */
+  transform: translateX(4px); /* slight slide on hover */
+}
+
+.admin-nav-link.active {
+  background: #bfdbfe;
+  color: #1d4ed8;
+  font-weight: 700;
+  border-left: 4px solid #1d4ed8; /* active indicator */
+  padding-left: 12px;
+}
+
 
 /* Responsive */
 @media (max-width: 768px) {

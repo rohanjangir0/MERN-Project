@@ -1,0 +1,120 @@
+.emp-req-container {
+  padding: 2rem;
+  background: #f9fafb;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+}
+
+.emp-req-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.3rem;
+}
+
+.emp-req-subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+.emp-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.emp-req-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.2rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.emp-req-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+.emp-req-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.emp-req-icon {
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emp-req-info h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+.emp-req-info p {
+  margin: 2px 0 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.emp-req-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.emp-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.15s;
+}
+.emp-btn:hover {
+  transform: translateY(-2px);
+}
+
+.emp-btn.allow {
+  background: #4ade80;
+  color: #fff;
+}
+.emp-btn.allow:hover {
+  background: #22c55e;
+}
+
+.emp-btn.deny {
+  background: #f87171;
+  color: #fff;
+}
+.emp-btn.deny:hover {
+  background: #dc2626;
+}
+
+.emp-status {
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+.emp-status.accepted {
+  background: #dcfce7;
+  color: #15803d;
+}
+.emp-status.declined {
+  background: #fee2e2;
+  color: #b91c1c;
+}

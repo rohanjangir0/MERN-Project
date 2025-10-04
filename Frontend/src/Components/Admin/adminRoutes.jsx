@@ -8,6 +8,8 @@ import ClientManagement from "./ClientManagement/ClientManagement";
 import ClientProposals from "./ClientProposals/ClientProposals";
 import AdminTickets from "./AdminTickets/AdminTickets"; 
 
+import EmployeeMonitoring from "./EmployeeMonitoring/EmployeeMonitoring"; // ✅ New
+
 export const adminRoutes = [
   { path: "dashboard", element: <AdminDashboard /> },
   { path: "leave-approvals", element: <AdminLeaveApprovals /> },
@@ -18,4 +20,5 @@ export const adminRoutes = [
   { path: "client-management", element: <ClientManagement /> },
   { path: "client-proposals", element: <ClientProposals /> },
   { path: "tickets", element: <AdminTickets /> }, 
+  { path: "employee-monitoring", element: <EmployeeMonitoring /> }, // ✅ New
 ];

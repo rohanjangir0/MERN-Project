@@ -12,8 +12,6 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Import routes
@@ -29,10 +27,12 @@ const attendanceRoutes = require("./src/routes/attendanceRoutes");
 const documentRoutes = require("./src/routes/documentRoutes");
 const clientRoutes = require("./src/routes/clientRoutes");
 const projectRoutes = require("./src/routes/projectRoutes");
-const ticketRoutes = require("./src/routes/ticketRoutes"); // ✅ Support Tickets
+const ticketRoutes = require("./src/routes/ticketRoutes");
+const monitoringRoutes = require("./src/routes/monitoringRequests");
 
 // Models
 const Message = require("./src/models/Message");
+const MonitoringRequest = require("./src/models/MonitoringRequest");
 
 // Register API routes
 app.use("/api/auth", authRouter);
@@ -47,65 +47,149 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/projects", projectRoutes);
-app.use("/api/tickets", ticketRoutes); // ✅ Tickets API
+app.use("/api/tickets", ticketRoutes);
+app.use("/api/monitoringRequests", monitoringRoutes);
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
-});
+app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
-// Create HTTP server
+// HTTP server
 const server = http.createServer(app);
 
-// Attach socket.io
+// Socket.IO setup
 const io = new Server(server, {
-  cors: {
-    origin: "*", // change to frontend URL in production
-    methods: ["GET", "POST"],
-  },
+  cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-// Track online users
-let onlineUsers = new Map();
+// ---------------- Real-Time Monitoring ----------------
+const onlineUsers = new Map(); // userId => { socketId, name, status, screen, voice, webcam }
+let activeSessions = []; // Active sessions
 
 io.on("connection", (socket) => {
   console.log("✅ New connection:", socket.id);
 
-  // Register user
-  socket.on("register", (user) => {
-    onlineUsers.set(user.id, socket.id);
-    io.emit("userList", Array.from(onlineUsers.keys()));
+  // User comes online
+  socket.on("employeeOnline", async (user) => {
+    onlineUsers.set(user.id, {
+      socketId: socket.id,
+      userId: user.id,
+      name: user.name,
+      status: "Active",
+      screen: false,
+      voice: false,
+      webcam: false,
+    });
+
+    // Send all pending requests to this user
+    const pending = await MonitoringRequest.find({
+      $or: [{ employeeId: user.id }, { adminId: user.id }],
+      status: "pending",
+    });
+    pending.forEach((r) => socket.emit("receiveMonitoringRequest", r));
+
+    // Emit updated online users to everyone
+    io.emit("onlineEmployees", Array.from(onlineUsers.values()));
   });
 
-  // Handle sending messages
+  // Admin sends monitoring request
+  // Admin sends monitoring request
+socket.on("sendMonitoringRequest", async (req) => {
+  try {
+    const newReq = await MonitoringRequest.create(req);
+
+    // Emit to employee even if not online (will be received on fetch)
+    const empSocketId = onlineUsers.get(req.employeeId)?.socketId;
+    if (empSocketId) {
+      io.to(empSocketId).emit("receiveMonitoringRequest", newReq);
+    }
+
+    // Emit pending requests to all admins
+    for (let [userId, info] of onlineUsers.entries()) {
+      if (userId.startsWith("admin")) {
+        const pending = await MonitoringRequest.find({ adminId: info.userId, status: "pending" });
+        io.to(info.socketId).emit("pendingRequests", pending);
+      }
+    }
+  } catch (err) {
+    console.error("❌ Error sending monitoring request:", err);
+  }
+});
+
+
+  // Employee responds to request
+  socket.on("respondMonitoringRequest", async (res) => {
+    try {
+      const updated = await MonitoringRequest.findByIdAndUpdate(
+        res.id,
+        { status: res.status, respondedAt: new Date() },
+        { new: true }
+      );
+
+      // Notify admin
+      const adminSocketId = onlineUsers.get(res.adminId)?.socketId;
+      if (adminSocketId) io.to(adminSocketId).emit("requestResponse", updated);
+
+      // If accepted, create active session
+      if (res.status === "accepted") {
+        const session = {
+          id: Date.now(),
+          employeeId: res.employeeId,
+          adminId: res.adminId,
+          type: res.type,
+          startedAt: new Date().toLocaleTimeString(),
+        };
+        activeSessions.push(session);
+        io.emit("activeSessions", activeSessions);
+      }
+    } catch (err) {
+      console.error("❌ Error responding to request:", err);
+    }
+  });
+
+  // Stop session
+  socket.on("stopSession", (sessionId) => {
+    activeSessions = activeSessions.filter((s) => s.id !== sessionId);
+    io.emit("activeSessions", activeSessions);
+  });
+
+  // Update screen/voice/webcam status
+  socket.on("updateStatus", ({ userId, screen, voice, webcam }) => {
+    if (onlineUsers.has(userId)) {
+      const user = onlineUsers.get(userId);
+      user.screen = screen;
+      user.voice = voice;
+      user.webcam = webcam;
+      onlineUsers.set(userId, user);
+      io.emit("onlineEmployees", Array.from(onlineUsers.values()));
+    }
+  });
+
+  // Chat messages
   socket.on("sendMessage", async (data) => {
     const { senderId, receiverId, text } = data;
-
     try {
       const newMsg = new Message({ senderId, receiverId, text });
       await newMsg.save();
 
-      // Emit to receiver
-      const receiverSocketId = onlineUsers.get(receiverId);
-      if (receiverSocketId) io.to(receiverSocketId).emit("receiveMessage", newMsg);
+      const receiverSocket = onlineUsers.get(receiverId)?.socketId;
+      if (receiverSocket) io.to(receiverSocket).emit("receiveMessage", newMsg);
 
-      // Emit back to sender
-      const senderSocketId = onlineUsers.get(senderId);
-      if (senderSocketId) io.to(senderSocketId).emit("receiveMessage", newMsg);
+      const senderSocket = onlineUsers.get(senderId)?.socketId;
+      if (senderSocket) io.to(senderSocket).emit("receiveMessage", newMsg);
     } catch (err) {
       console.error("❌ Error saving message:", err);
     }
   });
 
-  // Handle disconnect
+  // Disconnect
   socket.on("disconnect", () => {
-    for (let [userId, sockId] of onlineUsers.entries()) {
-      if (sockId === socket.id) {
+    for (let [userId, info] of onlineUsers.entries()) {
+      if (info.socketId === socket.id) {
         onlineUsers.delete(userId);
         break;
       }
     }
-    io.emit("userList", Array.from(onlineUsers.keys()));
+    io.emit("onlineEmployees", Array.from(onlineUsers.values()));
     console.log("❌ Disconnected:", socket.id);
   });
 });
@@ -116,8 +200,6 @@ mongoose
   .then(() => {
     console.log("✅ MongoDB connected");
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => console.error("❌ MongoDB connection error:", err));
