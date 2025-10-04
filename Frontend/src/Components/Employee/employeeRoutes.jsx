@@ -6,6 +6,10 @@ import Documents from "./Documents/Documents";
 import ChatApp from "./ChatApp/ChatApp";
 import EmployeeMonitoringRequests from "./EmployeeMonitoringRequests/EmployeeMonitoringRequests";
 
+
+const id = localStorage.getItem("employeeId");
+const name = localStorage.getItem("name") || "Employee";
+
 export const employeeRoutes = [
   { path: "dashboard", element: <Dashboard /> },
   { path: "tasks", element: <Tasks /> },
@@ -13,6 +17,7 @@ export const employeeRoutes = [
   { path: "leave-requests", element: <LeaveRequests /> },
   { path: "payroll", element: <h1>Payroll Page</h1> },
   { path: "documents", element: <Documents /> },
-  { path: "chat", element: <ChatApp userId={"68cd060f433e048855e28479"} /> },
-  { path: "employee-monitoring", element: <EmployeeMonitoringRequests /> }, // ✅ New Route
+  { path: "chat", element: <ChatApp userId={id} /> },
+  { path: "employee-monitoring", element: <EmployeeMonitoringRequests employeeId={id} employeeName={name} /> }, 
 ];
+
