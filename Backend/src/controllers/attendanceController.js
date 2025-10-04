@@ -1,74 +1,128 @@
+// src/controllers/attendanceController.js
 const Attendance = require("../models/Attendance");
 
-// Clock in/out
+// Helper to calculate total hours for all sessions minus breaks
+const calculateTotalHours = (sessions = []) => {
+  let totalMs = 0;
+  let breakMs = 0;
+
+  sessions.forEach(s => {
+    if (s.clockIn && s.clockOut) totalMs += new Date(s.clockOut) - new Date(s.clockIn);
+    s.breaks?.forEach(b => {
+      if (b.start && b.end) breakMs += new Date(b.end) - new Date(b.start);
+    });
+  });
+
+  const workedMs = totalMs - breakMs;
+  const hours = Math.floor(workedMs / 3600000);
+  const minutes = Math.floor((workedMs % 3600000) / 60000);
+  return `${hours}h ${minutes}m`;
+};
+
+// Clock in / Clock out
 exports.clock = async (req, res) => {
   try {
-    const userId = req.user.id; // from auth middleware
-    const { ip } = req.body;
-
+    const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "User not authenticated" });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const ip = req.body.ip || "Unknown IP";
 
-    let attendance = await Attendance.findOne({ userId, date: today });
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
-    if (!attendance) {
-      // Clock In
-      attendance = new Attendance({
-        userId,
-        date: today,
-        clockIn: new Date(),
+    let record = await Attendance.findOne({ user: userId, date: { $gte: todayStart } });
+
+    // Create new attendance record if none exists today
+    if (!record) {
+      record = new Attendance({
+        user: userId,
+        date: new Date(),
+        sessions: [{ clockIn: new Date(), breaks: [] }],
         status: "Present",
-        locationIP: ip || "Unknown IP"
+        locationIP: ip,
       });
-      await attendance.save();
-      return res.json({ allowed: true, message: "Clocked In successfully!" });
-    } else if (!attendance.clockOut) {
-      // Clock Out
-      attendance.clockOut = new Date();
-      const totalMinutes = Math.floor((attendance.clockOut - attendance.clockIn) / 60000);
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
-      attendance.totalHours = `${hours}h ${minutes}m`;
-      attendance.status = "Present";
-      await attendance.save();
-      return res.json({ allowed: true, message: "Clocked Out successfully!" });
-    } else {
-      return res.json({ allowed: false, message: "Already Clocked Out today" });
+      record.totalHours = calculateTotalHours(record.sessions);
+      await record.save();
+      return res.json({ message: "Clocked in successfully", record });
     }
+
+    // Ensure sessions array exists
+    record.sessions = record.sessions || [];
+    const lastSession = record.sessions[record.sessions.length - 1];
+
+    // Clock out current session if it's active
+    if (lastSession && !lastSession.clockOut) {
+      lastSession.clockOut = new Date();
+      record.status = "Present";
+      record.totalHours = calculateTotalHours(record.sessions);
+      await record.save();
+      return res.json({ message: "Clocked out successfully", record });
+    }
+
+    // Limit to max 3 sessions per day
+    if (record.sessions.length >= 3) {
+      return res.status(400).json({ message: "Maximum 3 clock-ins/out per day reached" });
+    }
+
+    // Start new session
+    record.sessions.push({ clockIn: new Date(), breaks: [] });
+    record.status = "Present";
+    record.totalHours = calculateTotalHours(record.sessions);
+    await record.save();
+    return res.json({ message: "Clocked in successfully", record });
+
   } catch (err) {
-    console.error("❌ Clock error:", err);
-    res.status(500).json({ message: "Internal Server Error", error: err.message });
+    console.error("Clock error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// Auto logout
-exports.autoLogout = async (req, res) => {
+// Record a break
+exports.break = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "User not authenticated" });
 
-    let attendance = await Attendance.findOne({ userId, date: today });
-    if (attendance && !attendance.clockOut) {
-      attendance.clockOut = new Date();
-      attendance.status = "Auto Logged Out";
-      await attendance.save();
+    const { type, start, end } = req.body;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const record = await Attendance.findOne({ user: userId, date: { $gte: todayStart } });
+    if (!record || !record.sessions?.length) {
+      return res.status(400).json({ message: "No active session to take break" });
     }
-    res.json({ message: "Auto logged out" });
+
+    const lastSession = record.sessions[record.sessions.length - 1];
+    lastSession.breaks = lastSession.breaks || [];
+
+    const startTime = start ? new Date(start) : new Date();
+    const endTime = end ? new Date(end) : new Date();
+    const durationMs = endTime - startTime;
+    const duration = `${Math.floor(durationMs / 60000)}m`;
+
+    lastSession.breaks.push({ type, start: startTime, end: endTime, duration });
+    record.totalHours = calculateTotalHours(record.sessions);
+
+    await record.save();
+    res.json({ message: "Break recorded", record });
+
   } catch (err) {
-    res.status(500).json({ message: "Internal Server Error", error: err.message });
+    console.error("Break error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// Get attendance history
-exports.getHistory = async (req, res) => {
+// Get history
+exports.history = async (req, res) => {
   try {
-    const userId = req.params.userId || req.user.id; // fallback to logged-in user
-    const records = await Attendance.find({ userId }).sort({ date: -1 });
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "User not authenticated" });
+
+    const records = await Attendance.find({ user: userId }).sort({ date: -1 });
     res.json(records);
+
   } catch (err) {
-    res.status(500).json({ message: "Internal Server Error", error: err.message });
+    console.error("History error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };

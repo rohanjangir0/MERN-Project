@@ -16,7 +16,6 @@ export default function EmployeeManagement() {
     password: "",
   });
 
-  // Load employees
   const fetchEmployees = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/employees");
@@ -30,11 +29,9 @@ export default function EmployeeManagement() {
     fetchEmployees();
   }, []);
 
-  // Save / Update Employee
   const handleSave = async () => {
     try {
       if (editingEmployee) {
-        // Update employee
         const res = await axios.put(
           `http://localhost:5000/api/employees/${editingEmployee._id}`,
           formData
@@ -46,19 +43,16 @@ export default function EmployeeManagement() {
         );
         setEditingEmployee(null);
       } else {
-        // Add employee
         if (!formData.password) {
           alert("Password is required for new employee");
           return;
         }
-
         const res = await axios.post(
           "http://localhost:5000/api/employees/add",
           formData
         );
         setEmployees([...employees, res.data.employee]);
       }
-
       setFormData({
         name: "",
         email: "",
@@ -69,13 +63,10 @@ export default function EmployeeManagement() {
       });
       setShowModal(false);
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.error || "Operation failed";
-      alert(errorMessage);
+      alert(err.response?.data?.error || "Operation failed");
     }
   };
 
-  // Delete Employee
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure?")) return;
     try {
@@ -86,7 +77,6 @@ export default function EmployeeManagement() {
     }
   };
 
-  // Edit Employee
   const handleEdit = (emp) => {
     setEditingEmployee(emp);
     setFormData({
@@ -95,72 +85,67 @@ export default function EmployeeManagement() {
       phone: emp.phone,
       department: emp.department,
       status: emp.status,
-      password: "", // leave blank on edit
+      password: "",
     });
     setShowModal(true);
   };
 
-  // Copy text to clipboard
   const copyToClipboard = (text) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
     alert("Copied!");
   };
 
-  // ===== Metrics =====
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter((e) => e.status === "Active").length;
   const onLeave = employees.filter((e) => e.status === "On Leave").length;
-  const avgPerformance = 85; // placeholder
-  const avgAttendance = 92; // placeholder
+  const avgPerformance = 85;
+  const avgAttendance = 92;
 
   return (
-    <div className="employee-management">
+    <div className="emp-management">
       <h1>Employee Management</h1>
       <p>Manage your workforce efficiently with modern tools.</p>
 
-      {/* Metrics */}
-      <div className="metrics-container">
-        <div className="metrics-card gradient-blue">
+      <div className="emp-metrics-container">
+        <div className="emp-metrics-card gradient-blue">
           <h3>Total Employees</h3>
           <h2>{totalEmployees}</h2>
         </div>
-        <div className="metrics-card gradient-green">
+        <div className="emp-metrics-card gradient-green">
           <h3>Active</h3>
           <h2>{activeEmployees}</h2>
         </div>
-        <div className="metrics-card gradient-yellow">
+        <div className="emp-metrics-card gradient-yellow">
           <h3>On Leave</h3>
           <h2>{onLeave}</h2>
         </div>
-        <div className="metrics-card gradient-purple">
+        <div className="emp-metrics-card gradient-purple">
           <h3>Avg Performance</h3>
           <h2>{avgPerformance}%</h2>
         </div>
-        <div className="metrics-card gradient-pink">
+        <div className="emp-metrics-card gradient-pink">
           <h3>Avg Attendance</h3>
           <h2>{avgAttendance}%</h2>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="toolbar">
-        <button onClick={() => setShowModal(true)} className="add-btn">
+      <div className="emp-toolbar">
+        <button onClick={() => setShowModal(true)} className="emp-add-btn">
           <FaUserPlus /> Add Employee
         </button>
       </div>
 
-      {/* Employee Directory */}
-      <div className="employee-directory">
+      <div className="emp-directory">
         {employees.map((emp) => (
-          <div key={emp._id} className="employee-card">
+          <div key={emp._id} className="emp-card">
             <h3>{emp.name}</h3>
             <p>{emp.department}</p>
             <p>{emp.email} | {emp.phone}</p>
             <p><strong>ID:</strong> {emp.employeeId}</p>
             <p><strong>Joined:</strong> {new Date(emp.joinDate).toLocaleDateString()}</p>
             <p>
-              <strong>Password:</strong> {"Hidden"}
+              <strong>Password:</strong> Hidden
               {emp.password && (
                 <button onClick={() => copyToClipboard(emp.password)}>
                   <FaClipboard />
@@ -168,11 +153,11 @@ export default function EmployeeManagement() {
               )}
             </p>
             <p><strong>Status:</strong> {emp.status}</p>
-            <div className="actions">
-              <button className="edit-btn" onClick={() => handleEdit(emp)}>
+            <div className="emp-actions">
+              <button className="emp-edit-btn" onClick={() => handleEdit(emp)}>
                 <FaEdit /> Edit
               </button>
-              <button className="delete-btn" onClick={() => handleDelete(emp._id)}>
+              <button className="emp-delete-btn" onClick={() => handleDelete(emp._id)}>
                 <FaTrash /> Delete
               </button>
             </div>
@@ -180,10 +165,9 @@ export default function EmployeeManagement() {
         ))}
       </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="emp-modal-overlay">
+          <div className="emp-modal">
             <h2>{editingEmployee ? "Edit Employee" : "Add Employee"}</h2>
             <input
               type="text"
@@ -226,11 +210,11 @@ export default function EmployeeManagement() {
               <option value="Inactive">Inactive</option>
             </select>
 
-            <div className="modal-actions">
-              <button onClick={handleSave} className="save-btn">
+            <div className="emp-modal-actions">
+              <button onClick={handleSave} className="emp-save-btn">
                 {editingEmployee ? "Update" : "Save"}
               </button>
-              <button onClick={() => setShowModal(false)} className="cancel-btn">
+              <button onClick={() => setShowModal(false)} className="emp-cancel-btn">
                 Cancel
               </button>
             </div>

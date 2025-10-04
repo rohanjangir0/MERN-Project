@@ -1,13 +1,21 @@
 const express = require("express");
-const { upload, uploadDocument, getEmployeeDocuments, getAllDocuments } = require("../controllers/documentController");
+const {
+  upload,
+  uploadDocument,
+  getEmployeeDocuments,
+  getAllDocuments,
+  updateDocumentStatus,
+} = require("../controllers/documentController");
+const authMiddleware = require("../middleware/auth");
 
 const router = express.Router();
 
-// Upload route
-// documentRoutes.js
-router.post("/upload", upload.single("file"), uploadDocument); // "file" is multer key
-router.get("/employee/:id", getEmployeeDocuments); // fetch by employeeId
-router.get("/all", getAllDocuments); // admin
+// Employee routes (require auth)
+router.post("/upload", authMiddleware, upload.single("file"), uploadDocument);
+router.get("/employee", authMiddleware, getEmployeeDocuments);
 
+// Admin routes
+router.get("/all", authMiddleware, getAllDocuments);
+router.patch("/:id/status", authMiddleware, updateDocumentStatus);
 
 module.exports = router;

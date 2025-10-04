@@ -1,104 +1,160 @@
 import React, { useEffect, useState } from "react";
 import "./Attendance.css";
-import { FaPlayCircle, FaStopCircle } from "react-icons/fa";
+import { FaPlayCircle, FaStopCircle, FaCoffee } from "react-icons/fa";
 import axios from "axios";
 
 const Attendance = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [attendanceStatus, setAttendanceStatus] = useState("Clocked Out");
-  const [clockInTime, setClockInTime] = useState("-");
-  const [clockOutTime, setClockOutTime] = useState("-");
   const [todayHours, setTodayHours] = useState("0h 0m");
   const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [todayRecord, setTodayRecord] = useState(null);
+  const [message, setMessage] = useState(""); 
+  const [showAll, setShowAll] = useState(false); 
   const [loading, setLoading] = useState(true);
 
-  // Get JWT token from localStorage
+  const [breakActive, setBreakActive] = useState(false);
+  const [breakStartTime, setBreakStartTime] = useState(null);
+  const [totalBreakMs, setTotalBreakMs] = useState(0);
+
+  const BASE_URL = "http://localhost:5000/api/attendance";
   const token = localStorage.getItem("token");
   const name = localStorage.getItem("name");
 
-  // If not logged in, show message
-  if (!token) {
-    return (
-      <p style={{ padding: "20px" }}>
-        User not logged in! Please log in to access attendance.
-      </p>
-    );
-  }
+  if (!token) return <p style={{ padding: "20px" }}>User not logged in!</p>;
 
-  // Update current time every second
+  const axiosConfig = { headers: { Authorization: `Bearer ${token}` } };
+
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Format date/time safely
   const formatTime = (date) => (date ? new Date(date).toLocaleTimeString() : "-");
 
-  // Axios config with token
-  const axiosConfig = {
-    headers: { Authorization: `Bearer ${token}` },
+  // Calculate total hours subtracting break time
+  const calculateTotalHours = (sessions) => {
+    if (!sessions?.length) return "0h 0m";
+    let totalMs = 0, breakMs = 0;
+    sessions.forEach((s) => {
+      if (s.clockIn && s.clockOut) totalMs += new Date(s.clockOut) - new Date(s.clockIn);
+      s.breaks?.forEach((b) => {
+        if (b.start && b.end) breakMs += new Date(b.end) - new Date(b.start);
+      });
+    });
+    const workedMs = totalMs - breakMs - totalBreakMs; // subtract ongoing break
+    const hours = Math.floor(workedMs / 3600000);
+    const minutes = Math.floor((workedMs % 3600000) / 60000);
+    return `${hours}h ${minutes}m`;
   };
 
-  // Fetch attendance history
+  const updateTodayRecord = (records) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const record = records.find(a => new Date(a.date).toISOString().split("T")[0] === todayStr) || null;
+    setTodayRecord(record);
+
+    if (record?.sessions?.length) {
+      const lastSession = record.sessions[record.sessions.length - 1];
+      setAttendanceStatus(lastSession.clockOut ? "Clocked Out" : "Clocked In");
+      setTodayHours(calculateTotalHours(record.sessions));
+      setTotalBreakMs(0);
+      setBreakActive(false);
+      setBreakStartTime(null);
+    } else {
+      setAttendanceStatus("Clocked Out");
+      setTodayHours("0h 0m");
+      setTotalBreakMs(0);
+      setBreakActive(false);
+      setBreakStartTime(null);
+    }
+  };
+
   const fetchAttendance = async () => {
     try {
-      const res = await axios.get("/api/attendance/history", axiosConfig);
+      const res = await axios.get(`${BASE_URL}/history`, axiosConfig);
       setAttendanceHistory(res.data);
-
-      const todayStr = new Date().toISOString().split("T")[0];
-      const todayRecord = res.data.find(
-        (a) => new Date(a.date).toISOString().split("T")[0] === todayStr
-      );
-
-      if (todayRecord) {
-        setClockInTime(formatTime(todayRecord.clockIn));
-        setClockOutTime(formatTime(todayRecord.clockOut));
-        setTodayHours(todayRecord.totalHours || "0h 0m");
-        setAttendanceStatus(todayRecord.clockOut ? "Clocked Out" : "Clocked In");
-      } else {
-        setClockInTime("-");
-        setClockOutTime("-");
-        setTodayHours("0h 0m");
-        setAttendanceStatus("Clocked Out");
-      }
+      updateTodayRecord(res.data);
     } catch (err) {
       console.error("Fetch attendance error:", err);
+      setMessage("Failed to fetch attendance history");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchAttendance();
-  }, []);
+  useEffect(() => { fetchAttendance(); }, []);
 
-  // Get public IP
   const getIP = async () => {
     try {
       const res = await axios.get("https://api.ipify.org?format=json");
       return res.data.ip;
-    } catch (err) {
-      console.error("IP fetch error:", err);
+    } catch {
       return "Unknown IP";
     }
   };
 
-  // Clock in/out
+  // Clock In / Clock Out
   const handleClock = async () => {
+    if (attendanceStatus === "Clocked In" && breakActive) {
+      handleBreak(); // stop break automatically before clock out
+    }
     try {
       const ip = await getIP();
-      const res = await axios.post("/api/attendance/clock", { ip }, axiosConfig);
-      alert(res.data.message);
-      fetchAttendance();
+      const res = await axios.post(`${BASE_URL}/clock`, { ip }, axiosConfig);
+      setMessage(res.data.message);
+
+      if (res.data.record) {
+        const updatedHistory = [
+          ...attendanceHistory.filter(r => r._id !== res.data.record._id),
+          res.data.record
+        ];
+        setAttendanceHistory(updatedHistory);
+        updateTodayRecord(updatedHistory);
+      } else fetchAttendance();
     } catch (err) {
       console.error("Clock error:", err);
-      alert(err.response?.data?.message || "Error clocking in/out");
+      setMessage(err.response?.data?.message || "Error clocking in/out");
     }
   };
 
-  // Weekly overview
-  const getWeeklyOverview = () => {
-    const weekDays = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  // Break toggle
+  const handleBreak = async () => {
+    if (!breakActive) {
+      setBreakActive(true);
+      setBreakStartTime(new Date());
+    } else {
+      const endTime = new Date();
+      const startTime = breakStartTime || new Date();
+      setTotalBreakMs(prev => prev + (endTime - startTime));
+
+      try {
+        const res = await axios.post(
+          `${BASE_URL}/break`,
+          { type: "Short Break", start: startTime, end: endTime },
+          axiosConfig
+        );
+        setMessage("Break recorded");
+
+        if (res.data.record) {
+          const updatedHistory = [
+            ...attendanceHistory.filter(r => r._id !== res.data.record._id),
+            res.data.record
+          ];
+          setAttendanceHistory(updatedHistory);
+          updateTodayRecord(updatedHistory);
+        } else fetchAttendance();
+      } catch (err) {
+        console.error("Break error:", err);
+        setMessage(err.response?.data?.message || "Error recording break");
+      }
+
+      setBreakActive(false);
+      setBreakStartTime(null);
+    }
+  };
+
+  const weeklyOverview = () => {
+    const weekDays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
@@ -109,106 +165,94 @@ const Attendance = () => {
       const record = attendanceHistory.find(a => new Date(a.date).toDateString() === date.toDateString());
       return {
         day: weekDays[date.getDay()],
-        totalHours: record?.totalHours || "0h 0m",
-        status: record?.status || "Absent"
+        totalHours: record?.sessions ? calculateTotalHours(record.sessions) : "0h 0m",
+        status: record?.status || "Absent",
       };
     });
   };
-
-  const getBreaksToday = () => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const record = attendanceHistory.find(a => new Date(a.date).toISOString().split("T")[0] === todayStr);
-    return record?.breaks || [];
-  };
-
-  const weeklyOverview = getWeeklyOverview();
-  const breaksToday = getBreaksToday();
 
   return (
     <div className="attendance-container">
       <h2 className="page-title">Attendance & Time Tracking</h2>
       <p className="subtitle">Hello {name}, track your work hours and manage attendance records.</p>
 
-      {/* Time Clock Card */}
+      {message && <div className="inline-message">{message}</div>}
+
       <div className="time-clock-card">
         <div className="current-time">
           <h1>{currentTime.toLocaleTimeString()}</h1>
           <p>Current Time</p>
         </div>
+
         <div className="clock-info">
-          <p><strong>{clockInTime}</strong> <span>Clock In</span></p>
+          <p><strong>{todayRecord?.sessions?.[0]?.clockIn ? formatTime(todayRecord.sessions[0].clockIn) : "-"}</strong> <span>First Clock In</span></p>
+          <p><strong>{todayRecord?.sessions?.[todayRecord.sessions.length - 1]?.clockOut ? formatTime(todayRecord.sessions[todayRecord.sessions.length - 1].clockOut) : "-"}</strong> <span>Last Clock Out</span></p>
           <p><strong>{todayHours}</strong> <span>Today's Hours</span></p>
           <p className="status">
             Status: <span className={attendanceStatus === "Clocked Out" ? "red-dot" : "present-dot"}></span> {attendanceStatus}
           </p>
         </div>
-        <button className="clock-btn" onClick={handleClock}>
-          {attendanceStatus === "Clocked Out" ? <FaPlayCircle size={20}/> : <FaStopCircle size={20}/>} 
-          {attendanceStatus === "Clocked Out" ? " Clock In" : " Clock Out"}
-        </button>
+
+        <div className="clock-buttons">
+          <button className="clock-btn" onClick={handleClock}>
+            {attendanceStatus === "Clocked Out" ? <FaPlayCircle /> : <FaStopCircle />}
+            {attendanceStatus === "Clocked Out" ? " Clock In" : " Clock Out"}
+          </button>
+
+          {attendanceStatus === "Clocked In" && (
+            <button className={`break-btn ${breakActive ? "break-active" : ""}`} onClick={handleBreak}>
+              <FaCoffee /> {breakActive ? " Break On" : " Break Off"}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="stats-cards">
-        <div className="stat-card"><h3>Attendance Rate</h3><p className="big-text">86%</p><span>19/22 days</span></div>
-        <div className="stat-card"><h3>Total Hours</h3><p className="big-text">165h 30m</p><span>This month</span></div>
-        <div className="stat-card"><h3>Avg Daily Hours</h3><p className="big-text">8h 42m</p><span>Per working day</span></div>
-        <div className="stat-card"><h3>Late Days</h3><p className="big-text">1</p><span>This month</span></div>
+      {todayRecord?.sessions?.map((session, idx) => (
+        <div key={idx} className="break-info">
+          <h4>Session {idx + 1} Breaks:</h4>
+          {session.breaks?.length ? session.breaks.map((b, i) => (
+            <p key={i}>{b.type}: {b.duration || "-"} </p>
+          )) : <p>No breaks in this session</p>}
+        </div>
+      ))}
+
+      <div className="weekly-cards">
+        {weeklyOverview().map((day, i) => (
+          <div key={i} className={`week-card ${day.status.toLowerCase()}`}>
+            <h4>{day.day}</h4>
+            <p>{day.totalHours}</p>
+            <p>{day.status}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Attendance Table */}
-      <h2 className="section-title">Attendance History</h2>
-      {loading ? <p>Loading...</p> : (
+      <button className="show-all-btn" onClick={() => setShowAll(!showAll)}>
+        {showAll ? "Hide Full History" : "See All Attendance"}
+      </button>
+
+      {showAll && !loading && (
         <table className="attendance-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Clock In</th>
-              <th>Clock Out</th>
-              <th>Total Hours</th>
-              <th>Break</th>
-              <th>Status</th>
-              <th>Location</th>
+              <th>Date</th><th>Clock In</th><th>Clock Out</th><th>Total Hours</th>
+              <th>Break</th><th>Status</th><th>Location</th>
             </tr>
           </thead>
           <tbody>
             {attendanceHistory.map(record => (
               <tr key={record._id}>
                 <td>{new Date(record.date).toLocaleDateString()}</td>
-                <td>{formatTime(record.clockIn)}</td>
-                <td>{formatTime(record.clockOut)}</td>
-                <td>{record.totalHours || "0h 0m"}</td>
-                <td>{record.breaks?.map(b => `${b.type}: ${b.duration || "-"}`).join(", ") || "-"}</td>
-                <td>
-                  <span className={
-                    record.status === "Present" ? "present" :
-                    record.status === "Late" ? "late" :
-                    record.status === "Leave" ? "leave" : "red-dot"
-                  }>{record.status}</span>
-                </td>
+                <td>{record.sessions?.map(s => formatTime(s.clockIn)).join(", ") || "-"}</td>
+                <td>{record.sessions?.map(s => formatTime(s.clockOut)).join(", ") || "-"}</td>
+                <td>{record.sessions ? calculateTotalHours(record.sessions) : "0h 0m"}</td>
+                <td>{record.sessions?.flatMap(s => s.breaks?.map(b => `${b.type}: ${b.duration || "-"}`) || []).join(", ") || "-"}</td>
+                <td>{record.status || "-"}</td>
                 <td>{record.locationIP || "-"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-
-      {/* Bottom Section */}
-      <div className="bottom-section">
-        <div className="weekly-overview">
-          <h3>Weekly Overview</h3>
-          {weeklyOverview.map(day => (
-            <p key={day.day}>{day.day}: {day.totalHours} {day.status === "Present" ? "✅" : day.status === "Late" ? "⚠️" : "❌"}</p>
-          ))}
-        </div>
-        <div className="break-tracking">
-          <h3>Break Tracking (Today)</h3>
-          {breaksToday.length === 0 && <p>No breaks recorded</p>}
-          {breaksToday.map((b, idx) => (
-            <p key={idx}><strong>{b.type}:</strong> {b.start ? new Date(b.start).toLocaleTimeString() : "-"} - {b.end ? new Date(b.end).toLocaleTimeString() : "-"} ({b.duration || "-"})</p>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

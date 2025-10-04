@@ -1,5 +1,4 @@
-
-.admin-sidebar {
+.adm-sidebar {
   width: 250px;
   height: 100vh;
   background: #fff;
@@ -7,50 +6,44 @@
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  position: fixed;
-  top: 0;
-  left: 0;
+  position: relative;
   z-index: 1200;
   transition: transform 0.3s ease;
 }
 
-.sidebar-logo {
+.adm-sidebar-logo {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 1.5rem;
 }
-
-.sidebar-logo h2 {
+.adm-sidebar-logo h2 {
   font-size: 1rem;
   font-weight: 600;
 }
-
-.sidebar-logo p {
+.adm-sidebar-logo p {
   font-size: 0.75rem;
   color: #6b7280;
 }
 
-.sidebar-nav {
+.adm-sidebar-nav {
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow-y: auto;
 }
 
-.nav-section {
+.adm-nav-section {
   margin-bottom: 1rem;
 }
-
-.nav-section-title {
+.adm-nav-section-title {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   color: #9ca3af;
   margin: 0 0 0.5rem 0.5rem;
 }
-
-.nav-link {
+.adm-nav-link {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -61,18 +54,16 @@
   font-size: 0.9rem;
   transition: background 0.2s;
 }
-
-.nav-link:hover {
+.adm-nav-link:hover {
   background: #f3f4f6;
 }
-
-.nav-link.active {
+.adm-nav-link.active {
   background: #e0f2fe;
   color: #0284c7;
   font-weight: 600;
 }
 
-.sidebar-user {
+.adm-sidebar-user {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -80,8 +71,7 @@
   padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
 }
-
-.user-avatar {
+.adm-user-avatar {
   background: #1e293b;
   color: white;
   border-radius: 50%;
@@ -93,19 +83,17 @@
   font-size: 0.8rem;
   font-weight: 600;
 }
-
-.user-info h4 {
+.adm-user-info h4 {
   font-size: 0.9rem;
   margin: 0;
 }
-
-.user-info p {
+.adm-user-info p {
   font-size: 0.75rem;
   color: #6b7280;
   margin: 0;
 }
 
-.logout-btn {
+.adm-logout-btn {
   margin-top: auto;
   padding: 0.75rem;
   border: none;
@@ -118,50 +106,26 @@
   cursor: pointer;
   transition: color 0.2s;
 }
-
-.logout-btn:hover {
+.adm-logout-btn:hover {
   color: #dc2626;
 }
 
-.sidebar-overlay {
+.adm-sidebar-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.3);
   z-index: 1100;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
-  .admin-sidebar {
-    width: 220px;
-    transform: translateX(-100%);
-  }
-  .admin-sidebar.open {
-    transform: translateX(0);
-  }
-}
-.admin-sidebar {
-  width: 250px;
-  height: 100vh;
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  /* remove fixed positioning */
-  position: relative;
-  z-index: 1200;
-  transition: transform 0.3s ease;
-}
-
-/* On small screens, sidebar becomes overlay */
-@media (max-width: 768px) {
-  .admin-sidebar {
+  .adm-sidebar {
     position: fixed;
     top: 0;
     left: 0;
     transform: translateX(-100%);
   }
-  .admin-sidebar.open {
+  .adm-sidebar.adm-open {
     transform: translateX(0);
   }
 }

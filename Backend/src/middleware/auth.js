@@ -8,9 +8,9 @@ module.exports = (req, res, next) => {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.user = {
       id: payload.id,
+      employeeId: payload.employeeId, // make sure JWT contains this
       role: payload.role,
       name: payload.name,
-      department: payload.department,
     };
     next();
   } catch (err) {

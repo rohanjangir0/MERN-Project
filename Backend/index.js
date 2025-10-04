@@ -28,7 +28,8 @@ const adminLeaveRoutes = require("./src/routes/adminLeaveRoutes");
 const attendanceRoutes = require("./src/routes/attendanceRoutes");
 const documentRoutes = require("./src/routes/documentRoutes");
 const clientRoutes = require("./src/routes/clientRoutes");
-const projectRoutes = require("./src/routes/projectRoutes"); // New Project Requests routes
+const projectRoutes = require("./src/routes/projectRoutes");
+const ticketRoutes = require("./src/routes/ticketRoutes"); // ✅ Support Tickets
 
 // Models
 const Message = require("./src/models/Message");
@@ -45,7 +46,8 @@ app.use("/api/admin/leaves", adminLeaveRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/clients", clientRoutes);
-app.use("/api/projects", projectRoutes); // New project request API
+app.use("/api/projects", projectRoutes);
+app.use("/api/tickets", ticketRoutes); // ✅ Tickets API
 
 // 404 handler
 app.use((req, res) => {

@@ -5,24 +5,21 @@ import {
   FaTachometerAlt,
   FaFileAlt,
   FaComments,
-  FaCalendarAlt,
-  FaDownload,
-  FaCog,
-  FaSignOutAlt,
   FaPlus,
+  FaLifeRing,
+  FaSignOutAlt,
 } from "react-icons/fa";
 
 const ClientSidebar = ({ sidebarOpen }) => {
-  const location = useLocation(); // to know current route
+  const location = useLocation();
 
-  // Helper to check if link is active
   const isActive = (path) => location.pathname === `/client/${path}`;
 
   return (
     <div className={`client-sidebar ${sidebarOpen ? "open" : "closed"}`}>
       {/* Header */}
       <div className="client-sidebar-header">
-        <div className="client-sidebar-logo">👥</div>
+        <div className="logo-circle">👥</div>
         <div>
           <h2 className="client-sidebar-title">Client Portal</h2>
           <p className="client-sidebar-subtitle">Project Hub</p>
@@ -33,23 +30,27 @@ const ClientSidebar = ({ sidebarOpen }) => {
       <ul className="client-sidebar-menu">
         <li className={isActive("dashboard") ? "active" : ""}>
           <Link to="/client/dashboard">
-            <FaTachometerAlt className="icon" /> Dashboard
+            <FaTachometerAlt className="icon" /> <span>Dashboard</span>
           </Link>
         </li>
         <li className={isActive("project-request") ? "active" : ""}>
           <Link to="/client/project-request">
-            <FaPlus className="icon" /> Request Project
+            <FaPlus className="icon" /> <span>Request Project</span>
           </Link>
         </li>
-        {/* Add other links when routes are ready */}
         <li className={isActive("proposals") ? "active" : ""}>
           <Link to="/client/proposals">
-            <FaFileAlt className="icon" /> Proposals
+            <FaFileAlt className="icon" /> <span>Proposals</span>
+          </Link>
+        </li>
+        <li className={isActive("support-tickets") ? "active" : ""}>
+          <Link to="/client/support-tickets">
+            <FaLifeRing className="icon" /> <span>Support & Tickets</span>
           </Link>
         </li>
         <li className={isActive("communication") ? "active" : ""}>
           <Link to="/client/communication">
-            <FaComments className="icon" /> Communication
+            <FaComments className="icon" /> <span>Communication</span>
             <span className="badge">3</span>
           </Link>
         </li>

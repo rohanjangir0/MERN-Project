@@ -5,15 +5,15 @@ import AdminNavbar from "./AdminNavbar/AdminNavbar";
 import "./adminLayout.css";
 
 const AdminLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true); // default open
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
-    <div className="admin-layout">
+    <div className="adm-layout">
       <AdminSidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-      <div className={`main-content ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <div className={`adm-main-content ${sidebarOpen ? "adm-sidebar-open" : ""}`}>
         <AdminNavbar toggleSidebar={toggleSidebar} />
-        <div className="page-content">
+        <div className="adm-page-content">
           <Outlet />
         </div>
       </div>

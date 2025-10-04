@@ -1,0 +1,137 @@
+/* Container */
+.admin-container {
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f0f4f8;
+}
+
+/* Heading */
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  gap: 10px;
+}
+
+.controls input,
+.controls select {
+  padding: 10px 15px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+  outline: none;
+  transition: 0.2s;
+}
+
+.controls input:focus,
+.controls select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 8px rgba(59,130,246,0.3);
+}
+
+/* Tickets Grid */
+.tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* Ticket Card */
+.ticket-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ticket-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+}
+
+/* Header */
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ticket-header h3 {
+  font-size: 1.1rem;
+  color: #111;
+  font-weight: 600;
+}
+
+/* Status Badge */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.open { background: #f59e0b; }
+.status-badge.in-progress { background: #3b82f6; }
+.status-badge.resolved { background: #10b981; }
+
+/* Ticket Info */
+.ticket-info p {
+  font-size: 0.95rem;
+  margin: 5px 0;
+  color: #555;
+}
+
+/* Actions */
+.ticket-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ticket-actions select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+  outline: none;
+  min-width: 130px;
+}
+
+.status-buttons button {
+  margin-left: 5px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+  font-size: 0.85rem;
+}
+
+.btn-progress { background: #3b82f6; color: #fff; }
+.btn-progress:hover { background: #2563eb; }
+
+.btn-resolve { background: #10b981; color: #fff; }
+.btn-resolve:hover { background: #047857; }
+
+/* No tickets */
+.no-tickets {
+  grid-column: 1/-1;
+  text-align: center;
+  font-size: 1.1rem;
+  color: #666;
+}
