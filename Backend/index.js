@@ -33,6 +33,8 @@ const monitoringRoutes = require("./src/routes/monitoringRequests");
 // ---------------- Models ----------------
 const Message = require("./src/models/Message");
 const MonitoringRequest = require("./src/models/MonitoringRequest");
+const livekitRouter = require("./src/routes/livekit");
+app.use("/api/livekit", livekitRouter);
 
 // ---------------- Register API routes ----------------
 app.use("/api/auth", authRouter);

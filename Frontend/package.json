@@ -12,10 +12,12 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@livekit/components-react": "^2.9.15",
     "@mui/material": "^7.3.2",
     "axios": "^1.12.2",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
+    "livekit-client": "^2.15.8",
     "lucide-react": "^0.544.0",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",
