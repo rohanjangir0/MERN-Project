@@ -89,7 +89,12 @@ export default function EmployeeMonitoringRequests({ employeeId, employeeName })
         socket.emit("stopSession", req._id);
       };
 
-      if (stream.getVideoTracks()[0]) stream.getVideoTracks()[0].onended = stopHandler;
+      if (stream.getTracks().length > 0) {
+        stream.getTracks().forEach(track => {
+        track.onended = stopHandler;
+        });
+      }
+
     } catch (err) {
       console.error("❌ Streaming failed:", err);
     }

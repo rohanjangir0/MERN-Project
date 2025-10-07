@@ -1,25 +1,30 @@
-// src/routes/livekit.js
 const express = require("express");
-const { AccessToken } = require("livekit-server-sdk");
 const router = express.Router();
+const { AccessToken } = require("livekit-server-sdk");
 
-const LIVEKIT_URL = process.env.LIVEKIT_URL;          // wss://saas-platform-e58rls1t.livekit.cloud
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;  // APIASfLDfbsqxec
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET; // vACzDx4DJTfOLOMgPs51gFFdBByrMueck5edpH8DpYnB
+router.get("/token", async (req, res) => {
+  const { room, identity, name } = req.query;
 
-router.get("/token", (req, res) => {
-  const { identity, name, room } = req.query;
-  if (!identity || !room) return res.status(400).json({ error: "Missing identity or room" });
+  if (!room || !identity) {
+    return res.status(400).json({ message: "Missing room or identity" });
+  }
 
   try {
-    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, { identity, name });
-    at.addGrant({ roomJoin: true, room });
+    // Replace with your actual LiveKit API credentials
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
+    const livekitUrl = "wss://saas-platform-e58rls1t.livekit.cloud";
 
-    const token = at.toJwt();
-    res.json({ token, url: LIVEKIT_URL });
+    // ✅ Create a *signed JWT token string*, not an object
+    const at = new AccessToken(apiKey, apiSecret, { identity, name });
+    at.addGrant({ room, roomJoin: true, canPublish: true, canSubscribe: true });
+
+    const token = await at.toJwt(); // <--- ✅ this returns a STRING JWT
+
+    res.json({ token, url: livekitUrl }); // ✅ token is now a string
   } catch (err) {
-    console.error("❌ LiveKit token error:", err);
-    res.status(500).json({ error: "Failed to generate token" });
+    console.error("LiveKit token error:", err);
+    res.status(500).json({ message: "Token generation failed" });
   }
 });
 
