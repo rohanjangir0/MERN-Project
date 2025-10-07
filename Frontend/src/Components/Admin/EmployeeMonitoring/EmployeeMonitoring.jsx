@@ -11,6 +11,7 @@ export default function EmployeeMonitoring() {
   const [activeSessions, setActiveSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const videoContainerRef = useRef(null);
+  const roomRef = useRef(null);
 
   const adminId = "admin-1";
 
@@ -31,6 +32,9 @@ export default function EmployeeMonitoring() {
       socket.off("pendingRequests");
       socket.off("activeSessions");
       socket.off("requestResponse");
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+      }
     };
   }, [socket]);
 
@@ -84,26 +88,40 @@ export default function EmployeeMonitoring() {
   const startViewing = async (req) => {
     try {
       const roomName = `monitoring-${req.employeeId}-${req._id}`;
-
       const res = await fetch(
         `http://localhost:5000/api/livekit/token?room=${roomName}&identity=${adminId}&name=Admin`
       );
-      const { token, url } = await res.json(); // ✅ token is string
+      const { token, url } = await res.json();
 
-      const room = new Room();
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+      });
+
+      roomRef.current = room;
       await room.connect(url, token);
+
+      console.log("✅ Admin connected to LiveKit room:", roomName);
 
       room.on(RoomEvent.TrackSubscribed, (track) => {
         if (track.kind === "video" || track.kind === "audio") {
           const el = track.attach();
-          el.style.width = track.kind === "video" ? "100%" : "0";
+          el.style.width = "100%";
           el.style.maxHeight = "500px";
           videoContainerRef.current.innerHTML = "";
           videoContainerRef.current.appendChild(el);
         }
       });
+
+      room.on(RoomEvent.Disconnected, () => {
+        console.warn("⚠️ Room disconnected");
+        if (videoContainerRef.current) {
+          videoContainerRef.current.innerHTML =
+            "<p class='disconnected'>Stream ended or employee disconnected.</p>";
+        }
+      });
     } catch (err) {
-      console.error("Admin view failed:", err);
+      console.error("❌ Admin view failed:", err);
     }
   };
 

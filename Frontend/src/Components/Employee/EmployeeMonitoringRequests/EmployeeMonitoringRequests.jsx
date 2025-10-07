@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Room } from "livekit-client";
+import { Room, RoomEvent } from "livekit-client";
 import { useSocket } from "../../../context/SocketContext";
 import axios from "axios";
 import "./EmployeeMonitoringRequests.css";
@@ -9,6 +9,7 @@ export default function EmployeeMonitoringRequests({ employeeId, employeeName })
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const livekitRoomRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
     if (!employeeId || !socket) return;
@@ -50,7 +51,6 @@ export default function EmployeeMonitoringRequests({ employeeId, employeeName })
     if (!socket) return;
 
     socket.emit("respondMonitoringRequest", { ...req, status });
-
     setRequests((prev) =>
       prev.map((r) => (r._id === req._id ? { ...r, status } : r))
     );
@@ -66,7 +66,7 @@ export default function EmployeeMonitoringRequests({ employeeId, employeeName })
       );
       const { token, url } = await res.json();
 
-      const room = new Room();
+      const room = new Room({ adaptiveStream: true, dynacast: true });
       livekitRoomRef.current = room;
       await room.connect(url, token);
 
@@ -79,22 +79,22 @@ export default function EmployeeMonitoringRequests({ employeeId, employeeName })
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       }
 
+      streamRef.current = stream;
+
       for (const track of stream.getTracks()) {
         await room.localParticipant.publishTrack(track);
       }
 
+      room.on(RoomEvent.Disconnected, () => {
+        console.log("⚠️ Employee room disconnected");
+      });
+
       const stopHandler = () => {
-        room.disconnect();
-        livekitRoomRef.current = null;
+        stream.getTracks().forEach((t) => t.stop());
         socket.emit("stopSession", req._id);
       };
 
-      if (stream.getTracks().length > 0) {
-        stream.getTracks().forEach(track => {
-        track.onended = stopHandler;
-        });
-      }
-
+      stream.getTracks().forEach((track) => (track.onended = stopHandler));
     } catch (err) {
       console.error("❌ Streaming failed:", err);
     }

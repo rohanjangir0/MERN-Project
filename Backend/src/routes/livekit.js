@@ -10,18 +10,26 @@ router.get("/token", async (req, res) => {
   }
 
   try {
-    // Replace with your actual LiveKit API credentials
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const livekitUrl = "wss://saas-platform-e58rls1t.livekit.cloud";
+    const livekitUrl = process.env.LIVEKIT_URL || "wss://saas-platform-e58rls1t.livekit.cloud";
 
-    // ✅ Create a *signed JWT token string*, not an object
-    const at = new AccessToken(apiKey, apiSecret, { identity, name });
-    at.addGrant({ room, roomJoin: true, canPublish: true, canSubscribe: true });
+    const at = new AccessToken(apiKey, apiSecret, {
+      identity,
+      name,
+      ttl: 60 * 60, // ✅ token valid for 1 hour
+    });
 
-    const token = await at.toJwt(); // <--- ✅ this returns a STRING JWT
+    at.addGrant({
+      room,
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+    });
 
-    res.json({ token, url: livekitUrl }); // ✅ token is now a string
+    const token = await at.toJwt();
+
+    res.json({ token, url: livekitUrl });
   } catch (err) {
     console.error("LiveKit token error:", err);
     res.status(500).json({ message: "Token generation failed" });
