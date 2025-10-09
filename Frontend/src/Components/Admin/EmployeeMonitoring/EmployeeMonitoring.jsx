@@ -10,9 +10,13 @@ export default function EmployeeMonitoring() {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [activeSessions, setActiveSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [reconnecting, setReconnecting] = useState(false);
+
   const videoContainerRef = useRef(null);
   const roomRef = useRef(null);
-
+  const currentTrackRef = useRef(null);
   const adminId = "admin-1";
 
   useEffect(() => {
@@ -32,9 +36,7 @@ export default function EmployeeMonitoring() {
       socket.off("pendingRequests");
       socket.off("activeSessions");
       socket.off("requestResponse");
-      if (roomRef.current) {
-        roomRef.current.disconnect();
-      }
+      disconnectRoom();
     };
   }, [socket]);
 
@@ -58,7 +60,9 @@ export default function EmployeeMonitoring() {
     setEmployees((prev) =>
       prev.map((emp) => ({
         ...emp,
-        status: list.some((e) => e.userId === emp.employeeId) ? "Online" : "Offline",
+        status: list.some((e) => e.userId === emp.employeeId)
+          ? "Online"
+          : "Offline",
       }))
     );
   };
@@ -67,14 +71,20 @@ export default function EmployeeMonitoring() {
     if (req.status === "accepted") startViewing(req);
   };
 
-  const requestEmployee = (emp, type) => {
-    if (!socket) return;
+  const requestEmployee = (emp) => {
+    setSelectedEmployee(emp);
+    setShowModal(true);
+  };
+
+  const sendRequest = (type, reason, duration) => {
+    if (!socket || !selectedEmployee) return;
 
     const req = {
       adminId,
-      employeeId: emp.employeeId,
+      employeeId: selectedEmployee.employeeId,
       type,
-      message: `Admin requests ${type} access`,
+      message: reason || `Admin requests ${type} access`,
+      duration,
     };
 
     socket.emit("sendMonitoringRequest", req);
@@ -83,74 +93,228 @@ export default function EmployeeMonitoring() {
       ...prev,
       { ...req, _id: Date.now().toString(), status: "pending" },
     ]);
+
+    setShowModal(false);
   };
 
-  const startViewing = async (req) => {
-    try {
-      const roomName = `monitoring-${req.employeeId}-${req._id}`;
-      const res = await fetch(
-        `http://localhost:5000/api/livekit/token?room=${roomName}&identity=${adminId}&name=Admin`
-      );
-      const { token, url } = await res.json();
-
-      const room = new Room({
-        adaptiveStream: true,
-        dynacast: true,
-      });
-
-      roomRef.current = room;
-      await room.connect(url, token);
-
-      console.log("✅ Admin connected to LiveKit room:", roomName);
-
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === "video" || track.kind === "audio") {
-          const el = track.attach();
-          el.style.width = "100%";
-          el.style.maxHeight = "500px";
-          videoContainerRef.current.innerHTML = "";
-          videoContainerRef.current.appendChild(el);
-        }
-      });
-
-      room.on(RoomEvent.Disconnected, () => {
-        console.warn("⚠️ Room disconnected");
-        if (videoContainerRef.current) {
-          videoContainerRef.current.innerHTML =
-            "<p class='disconnected'>Stream ended or employee disconnected.</p>";
-        }
-      });
-    } catch (err) {
-      console.error("❌ Admin view failed:", err);
+  const disconnectRoom = () => {
+    if (currentTrackRef.current) {
+      currentTrackRef.current.detach();
+      currentTrackRef.current = null;
+    }
+    if (roomRef.current) {
+      roomRef.current.disconnect();
+      roomRef.current = null;
+    }
+    if (videoContainerRef.current) {
+      videoContainerRef.current.innerHTML = "";
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  const startViewing = async (req) => {
+  try {
+    if (!selectedEmployee) return;
+
+    const roomName = `monitoring-${selectedEmployee.employeeId}-${req._id}`;
+    const res = await fetch(
+      `http://localhost:5000/api/livekit/token?room=${roomName}&identity=${adminId}&name=Admin`
+    );
+    const { token, url } = await res.json();
+
+    const room = new Room({ adaptiveStream: true, dynacast: true });
+    roomRef.current = room;
+
+    room.on(RoomEvent.Disconnected, () => {
+      if (videoContainerRef.current) {
+        videoContainerRef.current.innerHTML =
+          "<p class='disconnected'>🔴 Stream ended or disconnected</p>";
+      }
+    });
+
+    room.on(RoomEvent.Reconnecting, () => setReconnecting(true));
+    room.on(RoomEvent.Reconnected, () => setReconnecting(false));
+
+    // Subscribe to tracks from employee
+    room.on(RoomEvent.TrackSubscribed, (track) => {
+      if (!track || !videoContainerRef.current) return;
+
+      if (currentTrackRef.current) currentTrackRef.current.detach();
+
+      const el = track.attach();
+      el.style.width = "100%";
+      el.style.borderRadius = "16px";
+      el.style.maxHeight = "480px";
+
+      videoContainerRef.current.innerHTML = "";
+      videoContainerRef.current.appendChild(el);
+
+      currentTrackRef.current = track;
+    });
+
+    room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      if (track && currentTrackRef.current === track && videoContainerRef.current) {
+        currentTrackRef.current.detach();
+        currentTrackRef.current = null;
+        videoContainerRef.current.innerHTML =
+          "<p class='disconnected'>🔴 Stream ended</p>";
+      }
+    });
+
+    await room.connect(url, token);
+    console.log("✅ Admin connected and ready to view employee screen");
+  } catch (err) {
+    console.error("❌ Viewing failed:", err);
+    alert("Failed to view employee screen. Check network or LiveKit server.");
+  }
+};
+
+
+  if (loading) return <p>Loading dashboard...</p>;
 
   return (
-    <div className="monitoring">
-      <h2>Employee Monitoring Dashboard</h2>
+    <div className="monitoring-dashboard">
+      <header className="header">
+        <h1>Employee Monitoring Center</h1>
+        <p>Real-time insights with Apple-like premium design ✨</p>
+      </header>
 
-      <section className="employee-list">
-        {employees.map((emp) => (
-          <div key={emp.employeeId} className="employee-card">
-            <h4>{emp.name}</h4>
-            <p>Status: {emp.status}</p>
-            <div className="btn-group">
-              {["Screen", "Voice", "Webcam"].map((type) => (
-                <button key={type} onClick={() => requestEmployee(emp, type)}>
-                  Request {type}
-                </button>
-              ))}
+      {reconnecting && (
+        <div className="reconnecting-banner">🔄 Reconnecting to live stream...</div>
+      )}
+
+      {/* Status Bar */}
+      <div className="status-bar">
+        <span className="online">
+          🟢 {employees.filter((e) => e.status === "Online").length} Online
+        </span>
+        <span className="active">📺 {activeSessions.length} Active</span>
+      </div>
+
+      {/* Employee Grid */}
+      <h2 className="section-title">Employees Overview</h2>
+      <div className="bento-grid">
+        {employees.map((emp, idx) => (
+          <div
+            key={emp.employeeId || emp._id || `emp-${idx}`}
+            className={`bento-card ${emp.status?.toLowerCase() || "offline"}`}
+          >
+            <div className="bento-header">
+              <div>
+                <h3>{emp.name || emp.employeeName || "Unnamed Employee"}</h3>
+                <p>{emp.role || "Role not specified"}</p>
+              </div>
+              <span
+                className={`status-dot ${
+                  emp.status === "Online"
+                    ? "green"
+                    : emp.status === "Offline"
+                    ? "gray"
+                    : "orange"
+                }`}
+              ></span>
+            </div>
+
+            <div className="bento-body">
+              <p>
+                Department: <strong>{emp.department || "N/A"}</strong>
+              </p>
+              <div className="progress-bar">
+                <div
+                  className={`progress-fill ${
+                    emp.status === "Online" ? "online" : "offline"
+                  }`}
+                  style={{ width: emp.status === "Online" ? "90%" : "40%" }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="bento-footer">
+              <button onClick={() => requestEmployee(emp)}>Request Access</button>
             </div>
           </div>
         ))}
-      </section>
+      </div>
 
+      {/* Pending Requests */}
+      <div className="toast-section">
+        <h3>Requests & Sessions</h3>
+        <div className="toast-container">
+          {pendingRequests.map((req, idx) => (
+            <div
+              key={req._id || `${req.employeeId}-pending-${idx}`}
+              className="toast pending-toast"
+            >
+              <p>
+                <strong>{req.employeeId}</strong> — {req.message}
+              </p>
+              <span>🕓 Pending</span>
+            </div>
+          ))}
+          {activeSessions.map((act, idx) => (
+            <div
+              key={act._id || `${act.employeeId}-active-${idx}`}
+              className="toast active-toast"
+            >
+              <p>
+                <strong>{act.employeeId}</strong> — {act.message}
+              </p>
+              <span>✅ Active</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Live View */}
       <section className="viewer">
         <h3>Live View</h3>
-        <div ref={videoContainerRef} className="livekit-view"></div>
+        <div ref={videoContainerRef} className="live-view"></div>
       </section>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>Request Access</h3>
+            <p>
+              Send monitoring request to{" "}
+              <strong>{selectedEmployee?.name || "Unnamed Employee"}</strong>
+            </p>
+
+            <label>Type</label>
+            <select id="type">
+              <option>Screen Share</option>
+              <option>Voice</option>
+              <option>Webcam</option>
+            </select>
+
+            <label>Duration (minutes)</label>
+            <input id="duration" type="number" defaultValue="30" />
+
+            <label>Reason</label>
+            <input id="reason" placeholder="e.g. Code review, feedback..." />
+
+            <div className="modal-actions">
+              <button
+                onClick={() => {
+                  const type = document.getElementById("type").value;
+                  const reason = document.getElementById("reason").value;
+                  const duration = document.getElementById("duration").value;
+                  sendRequest(type, reason, duration);
+                }}
+                className="primary"
+              >
+                Send
+              </button>
+              <button
+                className="secondary"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
