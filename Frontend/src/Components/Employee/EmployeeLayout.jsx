@@ -1,26 +1,29 @@
+// EmployeeLayout.jsx
 import React from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar/Sidebar";
 import Navbar from "./Navbar/Navbar";
-import "./EmployeeLayout.css";
 import MonitoringPopup from "./EmployeeMonitoringRequests/MonitoringPopup";
+import { MonitoringProvider } from "../../context/MonitoringContext";
+import "./EmployeeLayout.css";
 
 const EmployeeLayout = () => {
-  // ✅ Define id and name from localStorage
-  const id = localStorage.getItem("employeeId");
-  const name = localStorage.getItem("name") || "Employee";
+  const employeeId = localStorage.getItem("employeeId");
+  const employeeName = localStorage.getItem("name") || "Employee";
 
   return (
-    <div className="employee-layout">
-      <Sidebar />
-      <div className="main-area">
-        <Navbar />
-        <div className="content">
-          <Outlet /> {/* employee pages will render here */}
-          <MonitoringPopup /> {/* global popup */}
+    <MonitoringProvider employeeId={employeeId} employeeName={employeeName}>
+      <div className="employee-layout">
+        <Sidebar />
+        <div className="main-area">
+          <Navbar />
+          <div className="content">
+            <Outlet />
+            <MonitoringPopup /> {/* global popup */}
+          </div>
         </div>
       </div>
-    </div>
+    </MonitoringProvider>
   );
 };
 

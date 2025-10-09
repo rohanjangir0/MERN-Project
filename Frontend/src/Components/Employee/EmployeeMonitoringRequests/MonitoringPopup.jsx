@@ -1,34 +1,23 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useSocket } from "../../../context/SocketContext";
+import React, { useEffect, useRef } from "react";
+import { useMonitoring } from "../../../context/MonitoringContext";
 import { Room, RoomEvent } from "livekit-client";
 
 export default function MonitoringPopup() {
-  const { socket } = useSocket();
-  const [request, setRequest] = useState(null);
+  const { activePopupRequest, respondRequest } = useMonitoring();
   const roomRef = useRef(null);
   const streamRef = useRef(null);
 
   useEffect(() => {
-    if (!socket) return;
-
-    // Listen for incoming requests from admin
-    socket.on("receiveMonitoringRequest", (req) => {
-      setRequest(req); // show popup
-    });
-
     return () => {
-      socket.off("receiveMonitoringRequest");
       cleanupStream();
     };
-  }, [socket]);
+  }, []);
 
   const cleanupStream = () => {
-    // Stop tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
-    // Disconnect room
     if (roomRef.current) {
       roomRef.current.disconnect();
       roomRef.current = null;
@@ -39,61 +28,42 @@ export default function MonitoringPopup() {
     try {
       cleanupStream();
 
-      // Get screen share
       let stream = null;
       try {
         stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      } catch (err) {
-        try {
-          stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        } catch (err2) {
-          alert("❌ Cannot capture screen. Allow screen sharing permissions.");
-          return;
-        }
+      } catch {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       }
       if (!stream) return;
       streamRef.current = stream;
 
-      // Get LiveKit token
       const roomName = `monitoring-${req.employeeId}-${req._id}`;
-      const res = await fetch(
-        `http://localhost:5000/api/livekit/token?room=${roomName}&identity=${req.employeeId}&name=Employee`
-      );
+      const res = await fetch(`http://localhost:5000/api/livekit/token?room=${roomName}&identity=${req.employeeId}&name=Employee`);
       const { token, url } = await res.json();
-      if (!token || !url) throw new Error("Invalid LiveKit token or URL");
+      if (!token || !url) throw new Error("Invalid LiveKit token");
 
       const room = new Room({ adaptiveStream: true, dynacast: true });
       roomRef.current = room;
       await room.connect(url, token);
 
-      // Publish tracks
       for (const track of stream.getTracks()) {
         await room.localParticipant.publishTrack(track);
         track.onended = () => {
-          socket.emit("stopSession", req._id);
           cleanupStream();
         };
       }
-
-      console.log("✅ Screen sharing started!");
     } catch (err) {
-      console.error("❌ Streaming failed:", err);
-      alert("Failed to start screen sharing. Check permissions or LiveKit connection.");
+      console.error("Streaming failed:", err);
+      alert("Failed to start screen sharing.");
     }
   };
 
-  const respond = async (status) => {
-    if (!socket || !request) return;
-    socket.emit("respondMonitoringRequest", { ...request, status });
+  if (!activePopupRequest) return null;
 
-    if (status === "accepted") {
-      await startStreaming(request);
-    }
-
-    setRequest(null); // close popup
+  const handleResponse = async (status) => {
+    respondRequest(activePopupRequest, status);
+    if (status === "accepted") await startStreaming(activePopupRequest);
   };
-
-  if (!request) return null;
 
   return (
     <div style={{
@@ -111,12 +81,12 @@ export default function MonitoringPopup() {
     }}>
       <h4>Monitoring Request</h4>
       <p>
-        <strong>{request.type}</strong> request from Admin<br/>
-        Message: {request.message}
+        <strong>{activePopupRequest.type}</strong> request from Admin<br/>
+        Message: {activePopupRequest.message}
       </p>
       <div style={{ marginTop: "10px" }}>
-        <button onClick={() => respond("accepted")} style={{ marginRight: "10px" }}>✅ Accept</button>
-        <button onClick={() => respond("declined")}>❌ Decline</button>
+        <button onClick={() => handleResponse("accepted")} style={{ marginRight: "10px" }}>✅ Accept</button>
+        <button onClick={() => handleResponse("declined")}>❌ Decline</button>
       </div>
     </div>
   );
