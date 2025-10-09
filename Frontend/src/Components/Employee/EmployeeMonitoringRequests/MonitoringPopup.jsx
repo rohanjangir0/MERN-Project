@@ -106,7 +106,7 @@ export default function MonitoringPopup() {
       borderRadius: "12px",
       boxShadow: "0 5px 20px rgba(0,0,0,0.3)",
       zIndex: 9999,
-      width: "320px",
+      width: "321px",
       textAlign: "center"
     }}>
       <h4>Monitoring Request</h4>
