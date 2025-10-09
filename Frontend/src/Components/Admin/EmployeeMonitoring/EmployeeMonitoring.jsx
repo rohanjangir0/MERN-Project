@@ -41,40 +41,20 @@ export default function EmployeeMonitoring() {
   }, [socket]);
 
   const fetchData = async () => {
-  try {
-    const empRes = await axios.get("http://localhost:5000/api/employees");
-    const employeesData = empRes.data;
+    try {
+      const empRes = await axios.get("http://localhost:5000/api/employees");
+      setEmployees(empRes.data);
 
-    // Fetch attendance for all employees
-    const attendancePromises = employeesData.map(async (emp) => {
-      try {
-        const res = await axios.get(
-          `http://localhost:5000/api/attendance/history?user=${emp._id}`
-        );
-        const today = new Date().toDateString();
-        const todayRecord = res.data.find(
-          (r) => new Date(r.date).toDateString() === today
-        );
-        return { ...emp, attendance: todayRecord };
-      } catch {
-        return { ...emp, attendance: null };
-      }
-    });
-
-    const withAttendance = await Promise.all(attendancePromises);
-    setEmployees(withAttendance);
-
-    const reqRes = await axios.get(
-      `http://localhost:5000/api/monitoringRequests/admin/${adminId}`
-    );
-    setPendingRequests(reqRes.data);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
-
+      const reqRes = await axios.get(
+        `http://localhost:5000/api/monitoringRequests/admin/${adminId}`
+      );
+      setPendingRequests(reqRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOnline = (list) => {
     setEmployees((prev) =>
@@ -118,76 +98,88 @@ export default function EmployeeMonitoring() {
   };
 
   const disconnectRoom = () => {
-    if (currentTrackRef.current) {
-      currentTrackRef.current.detach();
-      currentTrackRef.current = null;
-    }
+    detachTrack();
     if (roomRef.current) {
       roomRef.current.disconnect();
       roomRef.current = null;
     }
-    if (videoContainerRef.current) {
-      videoContainerRef.current.innerHTML = "";
+    if (videoContainerRef.current) videoContainerRef.current.innerHTML = "";
+  };
+
+  // ---------------- Updated startViewing ----------------
+  const startViewing = async (req) => {
+    try {
+      if (!selectedEmployee) return;
+
+      const roomName = `monitoring-${selectedEmployee.employeeId}-${req._id}`;
+      const res = await fetch(
+        `http://localhost:5000/api/livekit/token?room=${roomName}&identity=${adminId}&name=Admin`
+      );
+      const { token, url } = await res.json();
+
+      const room = new Room({ adaptiveStream: true, dynacast: true });
+      roomRef.current = room;
+
+      // Room event listeners
+      room.on(RoomEvent.Disconnected, () => {
+        if (videoContainerRef.current)
+          videoContainerRef.current.innerHTML =
+            "<p class='disconnected'>🔴 Stream ended or disconnected</p>";
+      });
+      room.on(RoomEvent.Reconnecting, () => setReconnecting(true));
+      room.on(RoomEvent.Reconnected, () => setReconnecting(false));
+
+      // Subscribe to new tracks
+      room.on(RoomEvent.TrackSubscribed, attachTrack);
+      room.on(RoomEvent.TrackUnsubscribed, detachTrack);
+
+      // Connect to LiveKit room
+      await room.connect(url, token);
+
+      // Subscribe to existing tracks safely
+      for (const participant of room.participants.values()) {
+        for (const publication of participant.tracks.values()) {
+          if (publication.isSubscribed && publication.track) {
+            attachTrack(publication.track);
+          } else {
+            publication.on("subscribed", attachTrack);
+          }
+        }
+      }
+
+      console.log("✅ Admin connected and ready to view employee screen");
+    } catch (err) {
+      console.error("❌ Viewing failed:", err);
+      alert("Failed to view employee screen. Check network or LiveKit server.");
     }
   };
 
-  const startViewing = async (req) => {
-  try {
-    if (!selectedEmployee) return;
+  // ---------------- Helper functions ----------------
+  const attachTrack = (track) => {
+    if (!track || !videoContainerRef.current) return;
 
-    const roomName = `monitoring-${selectedEmployee.employeeId}-${req._id}`;
-    const res = await fetch(
-      `http://localhost:5000/api/livekit/token?room=${roomName}&identity=${adminId}&name=Admin`
-    );
-    const { token, url } = await res.json();
+    if (currentTrackRef.current) detachTrack();
 
-    const room = new Room({ adaptiveStream: true, dynacast: true });
-    roomRef.current = room;
+    const el = track.attach();
+    el.style.width = "100%";
+    el.style.borderRadius = "16px";
+    el.style.maxHeight = "480px";
 
-    room.on(RoomEvent.Disconnected, () => {
-      if (videoContainerRef.current) {
-        videoContainerRef.current.innerHTML =
-          "<p class='disconnected'>🔴 Stream ended or disconnected</p>";
-      }
-    });
+    videoContainerRef.current.innerHTML = "";
+    videoContainerRef.current.appendChild(el);
 
-    room.on(RoomEvent.Reconnecting, () => setReconnecting(true));
-    room.on(RoomEvent.Reconnected, () => setReconnecting(false));
+    currentTrackRef.current = track;
+  };
 
-    // Subscribe to tracks from employee
-    room.on(RoomEvent.TrackSubscribed, (track) => {
-      if (!track || !videoContainerRef.current) return;
-
-      if (currentTrackRef.current) currentTrackRef.current.detach();
-
-      const el = track.attach();
-      el.style.width = "100%";
-      el.style.borderRadius = "16px";
-      el.style.maxHeight = "480px";
-
-      videoContainerRef.current.innerHTML = "";
-      videoContainerRef.current.appendChild(el);
-
-      currentTrackRef.current = track;
-    });
-
-    room.on(RoomEvent.TrackUnsubscribed, (track) => {
-      if (track && currentTrackRef.current === track && videoContainerRef.current) {
-        currentTrackRef.current.detach();
-        currentTrackRef.current = null;
-        videoContainerRef.current.innerHTML =
-          "<p class='disconnected'>🔴 Stream ended</p>";
-      }
-    });
-
-    await room.connect(url, token);
-    console.log("✅ Admin connected and ready to view employee screen");
-  } catch (err) {
-    console.error("❌ Viewing failed:", err);
-    alert("Failed to view employee screen. Check network or LiveKit server.");
-  }
-};
-
+  const detachTrack = () => {
+    if (currentTrackRef.current) {
+      currentTrackRef.current.detach();
+      currentTrackRef.current = null;
+    }
+    if (videoContainerRef.current)
+      videoContainerRef.current.innerHTML =
+        "<p class='disconnected'>🔴 Stream ended</p>";
+  };
 
   if (loading) return <p>Loading dashboard...</p>;
 
@@ -195,14 +187,15 @@ export default function EmployeeMonitoring() {
     <div className="monitoring-dashboard">
       <header className="header">
         <h1>Employee Monitoring Center</h1>
-        
+        <p>Real-time insights with Apple-like premium design ✨</p>
       </header>
 
       {reconnecting && (
-        <div className="reconnecting-banner">🔄 Reconnecting to live stream...</div>
+        <div className="reconnecting-banner">
+          🔄 Reconnecting to live stream...
+        </div>
       )}
 
-      {/* Status Bar */}
       <div className="status-bar">
         <span className="online">
           🟢 {employees.filter((e) => e.status === "Online").length} Online
@@ -210,56 +203,50 @@ export default function EmployeeMonitoring() {
         <span className="active">📺 {activeSessions.length} Active</span>
       </div>
 
-      {/* Employee Grid */}
-      {/* Employee Grid */}
-<h2 className="section-title">Employees Overview</h2>
-<div className="employee-grid">
-  {employees.map((emp) => (
-    <div key={emp._id} className="bento-card">
-      <h3>{emp.name}</h3>
-      <p>
-        Department: <strong>{emp.department || "N/A"}</strong>
-      </p>
+      <h2 className="section-title">Employees Overview</h2>
+      <div className="bento-grid">
+        {employees.map((emp, idx) => (
+          <div
+            key={emp.employeeId || emp._id || `emp-${idx}`}
+            className={`bento-card ${emp.status?.toLowerCase() || "offline"}`}
+          >
+            <div className="bento-header">
+              <div>
+                <h3>{emp.name || emp.employeeName || "Unnamed Employee"}</h3>
+                <p>{emp.role || "Role not specified"}</p>
+              </div>
+              <span
+                className={`status-dot ${
+                  emp.status === "Online"
+                    ? "green"
+                    : emp.status === "Offline"
+                    ? "gray"
+                    : "orange"
+                }`}
+              ></span>
+            </div>
 
-      {emp.attendance ? (
-        <div className="attendance-summary">
-          <p>
-            <strong>Today:</strong>{" "}
-            {emp.attendance.status === "Present" ? "🟢 Present" : "🔴 Absent"}
-          </p>
-          <p>
-            <strong>Hours Worked:</strong> {emp.attendance.totalHours || "0h 0m"}
-          </p>
-          <p>
-            <strong>Sessions:</strong> {emp.attendance.sessions?.length || 0}
-          </p>
-        </div>
-      ) : (
-        <p className="no-attendance">No attendance record today</p>
-      )}
+            <div className="bento-body">
+              <p>
+                Department: <strong>{emp.department || "N/A"}</strong>
+              </p>
+              <div className="progress-bar">
+                <div
+                  className={`progress-fill ${
+                    emp.status === "Online" ? "online" : "offline"
+                  }`}
+                  style={{ width: emp.status === "Online" ? "90%" : "40%" }}
+                ></div>
+              </div>
+            </div>
 
-      <div className="progress-bar">
-        <div
-          className={`progress-fill ${
-            emp.status === "Online" ? "online" : "offline"
-          }`}
-          style={{ width: emp.status === "Online" ? "90%" : "40%" }}
-        ></div>
+            <div className="bento-footer">
+              <button onClick={() => requestEmployee(emp)}>Request Access</button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <button
-        className="request-btn"
-        onClick={() => requestEmployee(emp)}
-      >
-        Request Access
-      </button>
-    </div>
-  ))}
-</div>
-
-
-
-      {/* Pending Requests */}
       <div className="toast-section">
         <h3>Requests & Sessions</h3>
         <div className="toast-container">
@@ -288,13 +275,11 @@ export default function EmployeeMonitoring() {
         </div>
       </div>
 
-      {/* Live View */}
       <section className="viewer">
         <h3>Live View</h3>
         <div ref={videoContainerRef} className="live-view"></div>
       </section>
 
-      {/* Modal */}
       {showModal && (
         <div className="modal">
           <div className="modal-content">

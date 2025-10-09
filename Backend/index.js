@@ -62,7 +62,6 @@ const io = new Server(server, {
 });
 
 // ---------------- Real-Time Monitoring ----------------
-// Map userId => array of connections
 const onlineUsers = new Map(); // userId => [{ socketId, name, status, screen, voice, webcam }]
 let activeSessions = [];       // Active monitoring sessions
 
@@ -71,10 +70,15 @@ io.on("connection", (socket) => {
 
   // ---------------- Employee/Admin Online ----------------
   socket.on("employeeOnline", async (user) => {
+    if (!user || !user.id) {
+      console.warn("⚠️ employeeOnline called without a valid user object");
+      return;
+    }
+
     const conns = onlineUsers.get(user.id) || [];
     conns.push({
       socketId: socket.id,
-      name: user.name,
+      name: user.name || "Unnamed",
       status: "Active",
       screen: false,
       voice: false,
@@ -91,48 +95,49 @@ io.on("connection", (socket) => {
       pending.forEach((r) => socket.emit("receiveMonitoringRequest", r));
     }
 
-    // Broadcast all online users to all clients
-    io.emit(
-      "onlineEmployees",
-      Array.from(onlineUsers.entries()).flatMap(([id, conns]) =>
-        conns.map((c) => ({ userId: id, ...c }))
-      )
-    );
+    // Broadcast all online users to clients
+    broadcastOnlineEmployees();
   });
 
   // ---------------- Admin Sends Monitoring Request ----------------
-  // When admin sends monitoring request
-socket.on("sendMonitoringRequest", async (req) => {
-  try {
-    // req.employeeId now comes from employee.employeeId
-    const newReq = await MonitoringRequest.create(req);
-
-    // Send to employee if online
-    if (onlineUsers.has(req.employeeId)) {
-      onlineUsers.get(req.employeeId).forEach((c) =>
-        io.to(c.socketId).emit("receiveMonitoringRequest", newReq)
-      );
-    }
-
-    // Notify all admins about pending requests
-    for (let [userId, conns] of onlineUsers.entries()) {
-      if (userId.startsWith("admin")) {
-        const pending = await MonitoringRequest.find({
-          adminId: userId,
-          status: "pending",
-        });
-        conns.forEach((c) => io.to(c.socketId).emit("pendingRequests", pending));
+  socket.on("sendMonitoringRequest", async (req) => {
+    try {
+      if (!req || !req.employeeId || !req.adminId) {
+        console.warn("⚠️ Invalid monitoring request received:", req);
+        return;
       }
-    }
-  } catch (err) {
-    console.error("❌ Error sending monitoring request:", err);
-  }
-});
 
+      const newReq = await MonitoringRequest.create(req);
+
+      // Send request to employee if online
+      if (onlineUsers.has(req.employeeId)) {
+        onlineUsers.get(req.employeeId).forEach((c) =>
+          io.to(c.socketId).emit("receiveMonitoringRequest", newReq)
+        );
+      }
+
+      // Notify all admins about pending requests
+      onlineUsers.forEach(async (conns, userId) => {
+        if (userId.startsWith("admin")) {
+          const pending = await MonitoringRequest.find({
+            adminId: userId,
+            status: "pending",
+          });
+          conns.forEach((c) => io.to(c.socketId).emit("pendingRequests", pending));
+        }
+      });
+
+      console.log(`📨 Monitoring request sent by ${req.adminId} to ${req.employeeId}`);
+    } catch (err) {
+      console.error("❌ Error sending monitoring request:", err);
+    }
+  });
 
   // ---------------- Employee Responds ----------------
   socket.on("respondMonitoringRequest", async (res) => {
     try {
+      if (!res || !res._id || !res.adminId) return;
+
       const updated = await MonitoringRequest.findByIdAndUpdate(
         res._id,
         { status: res.status, respondedAt: new Date() },
@@ -158,8 +163,10 @@ socket.on("sendMonitoringRequest", async (req) => {
         activeSessions.push(session);
         io.emit("activeSessions", activeSessions);
       }
+
+      console.log(`📩 Employee ${res.employeeId} responded with ${res.status}`);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Error responding to request:", err);
     }
   });
 
@@ -171,41 +178,34 @@ socket.on("sendMonitoringRequest", async (req) => {
 
   // ---------------- Update Employee Status ----------------
   socket.on("updateStatus", ({ userId, screen, voice, webcam }) => {
-    if (onlineUsers.has(userId)) {
-      const conns = onlineUsers.get(userId);
-      conns.forEach((c) => {
-        c.screen = screen;
-        c.voice = voice;
-        c.webcam = webcam;
-      });
-      onlineUsers.set(userId, conns);
+    if (!userId || !onlineUsers.has(userId)) return;
 
-      io.emit(
-        "onlineEmployees",
-        Array.from(onlineUsers.entries()).flatMap(([id, conns]) =>
-          conns.map((c) => ({ userId: id, ...c }))
-        )
-      );
-    }
+    const conns = onlineUsers.get(userId);
+    conns.forEach((c) => {
+      c.screen = screen;
+      c.voice = voice;
+      c.webcam = webcam;
+    });
+    onlineUsers.set(userId, conns);
+    broadcastOnlineEmployees();
   });
 
   // ---------------- Chat Messages ----------------
   socket.on("sendMessage", async (data) => {
     const { senderId, receiverId, text } = data;
+    if (!senderId || !receiverId || !text) return;
+
     try {
       const newMsg = new Message({ senderId, receiverId, text });
       await newMsg.save();
 
-      if (onlineUsers.has(receiverId)) {
-        onlineUsers.get(receiverId).forEach((c) =>
-          io.to(c.socketId).emit("receiveMessage", newMsg)
-        );
-      }
-      if (onlineUsers.has(senderId)) {
-        onlineUsers.get(senderId).forEach((c) =>
-          io.to(c.socketId).emit("receiveMessage", newMsg)
-        );
-      }
+      [senderId, receiverId].forEach((id) => {
+        if (onlineUsers.has(id)) {
+          onlineUsers.get(id).forEach((c) =>
+            io.to(c.socketId).emit("receiveMessage", newMsg)
+          );
+        }
+      });
     } catch (err) {
       console.error("❌ Error saving message:", err);
     }
@@ -213,20 +213,25 @@ socket.on("sendMonitoringRequest", async (req) => {
 
   // ---------------- Disconnect ----------------
   socket.on("disconnect", () => {
-    for (let [userId, conns] of onlineUsers.entries()) {
+    onlineUsers.forEach((conns, userId) => {
       const remaining = conns.filter((c) => c.socketId !== socket.id);
       if (remaining.length === 0) onlineUsers.delete(userId);
       else onlineUsers.set(userId, remaining);
-    }
+    });
 
+    broadcastOnlineEmployees();
+    console.log("❌ Disconnected:", socket.id);
+  });
+
+  // ---------------- Helper: Broadcast Online Employees ----------------
+  function broadcastOnlineEmployees() {
     io.emit(
       "onlineEmployees",
       Array.from(onlineUsers.entries()).flatMap(([id, conns]) =>
         conns.map((c) => ({ userId: id, ...c }))
       )
     );
-    console.log("❌ Disconnected:", socket.id);
-  });
+  }
 });
 
 // ---------------- Connect to MongoDB & Start Server ----------------
