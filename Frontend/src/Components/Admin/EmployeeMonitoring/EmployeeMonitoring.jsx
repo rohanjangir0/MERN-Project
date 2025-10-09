@@ -41,20 +41,40 @@ export default function EmployeeMonitoring() {
   }, [socket]);
 
   const fetchData = async () => {
-    try {
-      const empRes = await axios.get("http://localhost:5000/api/employees");
-      setEmployees(empRes.data);
+  try {
+    const empRes = await axios.get("http://localhost:5000/api/employees");
+    const employeesData = empRes.data;
 
-      const reqRes = await axios.get(
-        `http://localhost:5000/api/monitoringRequests/admin/${adminId}`
-      );
-      setPendingRequests(reqRes.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Fetch attendance for all employees
+    const attendancePromises = employeesData.map(async (emp) => {
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/attendance/history?user=${emp._id}`
+        );
+        const today = new Date().toDateString();
+        const todayRecord = res.data.find(
+          (r) => new Date(r.date).toDateString() === today
+        );
+        return { ...emp, attendance: todayRecord };
+      } catch {
+        return { ...emp, attendance: null };
+      }
+    });
+
+    const withAttendance = await Promise.all(attendancePromises);
+    setEmployees(withAttendance);
+
+    const reqRes = await axios.get(
+      `http://localhost:5000/api/monitoringRequests/admin/${adminId}`
+    );
+    setPendingRequests(reqRes.data);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleOnline = (list) => {
     setEmployees((prev) =>
@@ -175,7 +195,7 @@ export default function EmployeeMonitoring() {
     <div className="monitoring-dashboard">
       <header className="header">
         <h1>Employee Monitoring Center</h1>
-        <p>Real-time insights with Apple-like premium design ✨</p>
+        
       </header>
 
       {reconnecting && (
@@ -191,49 +211,53 @@ export default function EmployeeMonitoring() {
       </div>
 
       {/* Employee Grid */}
-      <h2 className="section-title">Employees Overview</h2>
-      <div className="bento-grid">
-        {employees.map((emp, idx) => (
-          <div
-            key={emp.employeeId || emp._id || `emp-${idx}`}
-            className={`bento-card ${emp.status?.toLowerCase() || "offline"}`}
-          >
-            <div className="bento-header">
-              <div>
-                <h3>{emp.name || emp.employeeName || "Unnamed Employee"}</h3>
-                <p>{emp.role || "Role not specified"}</p>
-              </div>
-              <span
-                className={`status-dot ${
-                  emp.status === "Online"
-                    ? "green"
-                    : emp.status === "Offline"
-                    ? "gray"
-                    : "orange"
-                }`}
-              ></span>
-            </div>
+      {/* Employee Grid */}
+<h2 className="section-title">Employees Overview</h2>
+<div className="employee-grid">
+  {employees.map((emp) => (
+    <div key={emp._id} className="bento-card">
+      <h3>{emp.name}</h3>
+      <p>
+        Department: <strong>{emp.department || "N/A"}</strong>
+      </p>
 
-            <div className="bento-body">
-              <p>
-                Department: <strong>{emp.department || "N/A"}</strong>
-              </p>
-              <div className="progress-bar">
-                <div
-                  className={`progress-fill ${
-                    emp.status === "Online" ? "online" : "offline"
-                  }`}
-                  style={{ width: emp.status === "Online" ? "90%" : "40%" }}
-                ></div>
-              </div>
-            </div>
+      {emp.attendance ? (
+        <div className="attendance-summary">
+          <p>
+            <strong>Today:</strong>{" "}
+            {emp.attendance.status === "Present" ? "🟢 Present" : "🔴 Absent"}
+          </p>
+          <p>
+            <strong>Hours Worked:</strong> {emp.attendance.totalHours || "0h 0m"}
+          </p>
+          <p>
+            <strong>Sessions:</strong> {emp.attendance.sessions?.length || 0}
+          </p>
+        </div>
+      ) : (
+        <p className="no-attendance">No attendance record today</p>
+      )}
 
-            <div className="bento-footer">
-              <button onClick={() => requestEmployee(emp)}>Request Access</button>
-            </div>
-          </div>
-        ))}
+      <div className="progress-bar">
+        <div
+          className={`progress-fill ${
+            emp.status === "Online" ? "online" : "offline"
+          }`}
+          style={{ width: emp.status === "Online" ? "90%" : "40%" }}
+        ></div>
       </div>
+
+      <button
+        className="request-btn"
+        onClick={() => requestEmployee(emp)}
+      >
+        Request Access
+      </button>
+    </div>
+  ))}
+</div>
+
+
 
       {/* Pending Requests */}
       <div className="toast-section">
