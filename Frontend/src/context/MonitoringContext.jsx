@@ -1,5 +1,5 @@
-// src/context/MonitoringContext.jsx
-import React, { createContext, useState, useEffect, useContext } from "react";
+// context/MonitoringContext.jsx
+import React, { createContext, useState, useEffect, useContext, useRef } from "react";
 import { useSocket } from "./SocketContext";
 
 const MonitoringContext = createContext();
@@ -7,24 +7,21 @@ const MonitoringContext = createContext();
 export const MonitoringProvider = ({ children, employeeId, employeeName }) => {
   const { socket } = useSocket();
   const [requests, setRequests] = useState([]);
-  const [activePopupRequest, setActivePopupRequest] = useState(null);
+  const [latestRequest, setLatestRequest] = useState(null);
+  const handledRequests = useRef(new Set()); // ✅ store handled request IDs
 
-  // Fetch existing requests from backend
+  // Fetch existing requests
   useEffect(() => {
     if (!employeeId) return;
-
     const fetchRequests = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:5000/api/monitoringRequests/employee/${employeeId}`
-        );
+        const res = await fetch(`http://localhost:5000/api/monitoringRequests/employee/${employeeId}`);
         const data = await res.json();
         setRequests(data || []);
       } catch (err) {
-        console.error("Error fetching monitoring requests:", err);
+        console.error("Error fetching requests:", err);
       }
     };
-
     fetchRequests();
   }, [employeeId]);
 
@@ -35,18 +32,18 @@ export const MonitoringProvider = ({ children, employeeId, employeeName }) => {
     socket.emit("employeeOnline", { id: employeeId, name: employeeName || "Employee" });
 
     const handleReceiveRequest = (req) => {
-      if (req.employeeId === employeeId) {
+      if (req.employeeId === employeeId && !handledRequests.current.has(req._id)) {
         setRequests((prev) => (prev.some(r => r._id === req._id) ? prev : [...prev, req]));
-        setActivePopupRequest(req); // trigger popup
+        setLatestRequest(req); // show popup only if not handled
       }
     };
 
     const handleRequestResponse = (updatedReq) => {
-      setRequests((prev) =>
-        prev.map((r) => (r._id === updatedReq._id ? updatedReq : r))
-      );
-      if (activePopupRequest?._id === updatedReq._id) {
-        setActivePopupRequest(updatedReq); // update popup if open
+      setRequests((prev) => prev.map(r => r._id === updatedReq._id ? updatedReq : r));
+      // if latestRequest has been handled, remove popup
+      if (latestRequest?._id === updatedReq._id) {
+        setLatestRequest(null);
+        handledRequests.current.add(updatedReq._id);
       }
     };
 
@@ -57,23 +54,27 @@ export const MonitoringProvider = ({ children, employeeId, employeeName }) => {
       socket.off("receiveMonitoringRequest", handleReceiveRequest);
       socket.off("requestResponse", handleRequestResponse);
     };
-  }, [socket, employeeId, employeeName, activePopupRequest]);
+  }, [socket, employeeId, employeeName, latestRequest]);
 
   const respondRequest = (req, status) => {
     if (!socket) return;
+
     socket.emit("respondMonitoringRequest", { ...req, status });
 
-    setRequests((prev) =>
-      prev.map((r) => (r._id === req._id ? { ...r, status } : r))
-    );
+    // mark as handled
+    handledRequests.current.add(req._id);
 
-    if (activePopupRequest?._id === req._id) {
-      setActivePopupRequest(null); // close popup
+    // update request list
+    setRequests((prev) => prev.map(r => r._id === req._id ? { ...r, status } : r));
+
+    // remove popup if this is the latest request
+    if (latestRequest?._id === req._id) {
+      setLatestRequest(null);
     }
   };
 
   return (
-    <MonitoringContext.Provider value={{ requests, activePopupRequest, setActivePopupRequest, respondRequest }}>
+    <MonitoringContext.Provider value={{ requests, latestRequest, respondRequest }}>
       {children}
     </MonitoringContext.Provider>
   );

@@ -1,16 +1,14 @@
 import React, { useEffect, useRef } from "react";
 import { useMonitoring } from "../../../context/MonitoringContext";
-import { Room, RoomEvent } from "livekit-client";
+import { Room } from "livekit-client";
 
 export default function MonitoringPopup() {
-  const { activePopupRequest, respondRequest } = useMonitoring();
+  const { latestRequest, respondRequest } = useMonitoring();
   const roomRef = useRef(null);
   const streamRef = useRef(null);
 
   useEffect(() => {
-    return () => {
-      cleanupStream();
-    };
+    return () => cleanupStream();
   }, []);
 
   const cleanupStream = () => {
@@ -48,9 +46,7 @@ export default function MonitoringPopup() {
 
       for (const track of stream.getTracks()) {
         await room.localParticipant.publishTrack(track);
-        track.onended = () => {
-          cleanupStream();
-        };
+        track.onended = () => cleanupStream();
       }
     } catch (err) {
       console.error("Streaming failed:", err);
@@ -58,11 +54,11 @@ export default function MonitoringPopup() {
     }
   };
 
-  if (!activePopupRequest) return null;
+  if (!latestRequest) return null;
 
   const handleResponse = async (status) => {
-    respondRequest(activePopupRequest, status);
-    if (status === "accepted") await startStreaming(activePopupRequest);
+    respondRequest(latestRequest, status);
+    if (status === "accepted") await startStreaming(latestRequest);
   };
 
   return (
@@ -81,11 +77,11 @@ export default function MonitoringPopup() {
     }}>
       <h4>Monitoring Request</h4>
       <p>
-        <strong>{activePopupRequest.type}</strong> request from Admin<br/>
-        Message: {activePopupRequest.message}
+        <strong>{latestRequest.type}</strong> request from Admin<br/>
+        Message: {latestRequest.message}
       </p>
       <div style={{ marginTop: "10px" }}>
-        <button onClick={() => handleResponse("accepted")} style={{ marginRight: "10px" }}>✅ Accept</button>
+        <button onClick={() => handleResponse("accepted")} style={{ marginRight: "10px"}}>✅ Accept</button>
         <button onClick={() => handleResponse("declined")}>❌ Decline</button>
       </div>
     </div>
