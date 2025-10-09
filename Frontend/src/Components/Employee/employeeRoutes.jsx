@@ -20,4 +20,3 @@ export const employeeRoutes = [
   { path: "chat", element: <ChatApp userId={id} /> },
   { path: "employee-monitoring", element: <EmployeeMonitoringRequests employeeId={id} employeeName={name} /> }, 
 ];
-
