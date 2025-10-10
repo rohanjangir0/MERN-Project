@@ -19,12 +19,13 @@ export default function EmployeeMonitoringRequests() {
             </div>
             {req.status === "pending" ? (
               <div className="req-actions">
-                <button onClick={() => respondRequest(req, "accepted", true, true, true)}>✅ Allow All</button>
-                <button onClick={() => respondRequest(req, "declined", false, false, false)}>❌ Deny</button>
+                <button onClick={() => respondRequest(req, "accepted", true, true)}>✅ Allow</button>
+                <button onClick={() => respondRequest(req, "declined", false, false)}>❌ Deny</button>
               </div>
             ) : <p>Status: {req.status}</p>}
           </div>
-        ))}
+        ))
+      }
     </div>
   );
 }

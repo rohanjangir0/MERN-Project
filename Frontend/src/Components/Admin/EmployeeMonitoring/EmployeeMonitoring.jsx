@@ -7,14 +7,13 @@ export default function EmployeeMonitoring() {
   const { socket } = useSocket();
   const [employees, setEmployees] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
-  const [activeSessions, setActiveSessions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const videoRef = useRef(null);
   const roomRef = useRef(null);
   const currentTrackRef = useRef(null);
 
-  const adminId = "admin-1"; // Replace with real admin ID if dynamic
+  const adminId = "admin-1"; // replace with dynamic ID if needed
 
   // ---------------- Socket setup ----------------
   useEffect(() => {
@@ -29,13 +28,11 @@ export default function EmployeeMonitoring() {
     socket.on("onlineEmployees", handleOnline);
     socket.on("pendingRequests", setPendingRequests);
     socket.on("requestResponse", handleRequestResponse);
-    socket.on("activeSessions", setActiveSessions);
 
     return () => {
       socket.off("onlineEmployees", handleOnline);
       socket.off("pendingRequests", setPendingRequests);
       socket.off("requestResponse", handleRequestResponse);
-      socket.off("activeSessions");
       disconnectRoom();
     };
   }, [socket]);
@@ -57,7 +54,6 @@ export default function EmployeeMonitoring() {
     }
   };
 
-  // ---------------- Socket handlers ----------------
   const handleOnline = (list) => {
     setEmployees(prev =>
       prev.map(emp => ({
@@ -134,10 +130,8 @@ export default function EmployeeMonitoring() {
     currentTrackRef.current = null;
   };
 
-  // ---------------- Send monitoring request ----------------
   const sendMonitoringRequest = (employeeId) => {
     if (!socket) return;
-
     const request = {
       employeeId,
       adminId,
@@ -145,14 +139,12 @@ export default function EmployeeMonitoring() {
       status: "pending",
       message: "Please share your screen and audio for monitoring."
     };
-
     socket.emit("sendMonitoringRequest", request);
     setPendingRequests(prev => [...prev, { ...request, _id: Date.now() }]);
   };
 
   if (loading) return <p>Loading dashboard...</p>;
 
-  // ---------------- Render ----------------
   return (
     <div className="monitoring-dashboard">
       <h1>Employee Monitoring Center</h1>
@@ -164,7 +156,6 @@ export default function EmployeeMonitoring() {
             <p>Status: {emp.status || "Offline"}</p>
             <button
               onClick={() => sendMonitoringRequest(emp.employeeId)}
-              className="request-btn"
               disabled={emp.status !== "Online"}
             >
               Request Monitoring
