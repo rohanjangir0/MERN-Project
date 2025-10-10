@@ -1,38 +1,35 @@
 const express = require("express");
 const router = express.Router();
-const { AccessToken } = require("livekit-server-sdk");
+const { AccessToken, VideoGrant } = require("livekit-server-sdk"); // ✅ v2 CommonJS import
+require("dotenv").config();
 
-router.get("/token", async (req, res) => {
-  const { room, identity, name } = req.query;
-
-  if (!room || !identity) {
-    return res.status(400).json({ message: "Missing room or identity" });
-  }
-
+router.get("/token", (req, res) => {
   try {
-    const apiKey = process.env.LIVEKIT_API_KEY;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const livekitUrl = process.env.LIVEKIT_URL || "wss://saas-platform-e58rls1t.livekit.cloud";
+    const { room, identity, name, role } = req.query;
+    if (!room || !identity || !role) {
+      return res.status(400).json({ message: "Missing parameters: room, identity, role" });
+    }
 
-    const at = new AccessToken(apiKey, apiSecret, {
-      identity,
-      name,
-      ttl: 60 * 60, // ✅ token valid for 1 hour
+    const canPublish = role !== "admin";
+
+    // Create token
+    const token = new AccessToken(
+      process.env.LIVEKIT_API_KEY,
+      process.env.LIVEKIT_API_SECRET,
+      { identity, name }
+    );
+
+    // ⚡ Important: Use VideoGrant directly
+    const grant = VideoGrant({ room, canPublish, audio: canPublish, video: canPublish });
+    token.addGrant(grant);
+
+    res.json({
+      token: token.toJwt(),
+      url: process.env.LIVEKIT_URL,
     });
-
-    at.addGrant({
-      room,
-      roomJoin: true,
-      canPublish: true,
-      canSubscribe: true,
-    });
-
-    const token = await at.toJwt();
-
-    res.json({ token, url: livekitUrl });
   } catch (err) {
     console.error("LiveKit token error:", err);
-    res.status(500).json({ message: "Token generation failed" });
+    res.status(500).json({ message: "Failed to generate LiveKit token", error: err.message });
   }
 });
 

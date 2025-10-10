@@ -29,14 +29,9 @@ const clientRoutes = require("./src/routes/clientRoutes");
 const projectRoutes = require("./src/routes/projectRoutes");
 const ticketRoutes = require("./src/routes/ticketRoutes");
 const monitoringRoutes = require("./src/routes/monitoringRequests");
-
-// ---------------- Models ----------------
-const Message = require("./src/models/Message");
-const MonitoringRequest = require("./src/models/MonitoringRequest");
 const livekitRouter = require("./src/routes/livekit");
-app.use("/api/livekit", livekitRouter);
 
-// ---------------- Register API routes ----------------
+app.use("/api/livekit", livekitRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/leaves", leavesRouter);
 app.use("/api/employees", employeeRoutes);
@@ -52,194 +47,158 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/monitoringRequests", monitoringRoutes);
 
-// 404 handler
+// 404
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
-// ---------------- HTTP & Socket.IO Server ----------------
+// ---------------- HTTP & Socket.IO ----------------
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
-});
+const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
+
+const MonitoringRequest = require("./src/models/MonitoringRequest");
+const Message = require("./src/models/Message");
 
 // ---------------- Real-Time Monitoring ----------------
-const onlineUsers = new Map(); // userId => [{ socketId, name, status, screen, voice, webcam }]
-let activeSessions = [];       // Active monitoring sessions
+const onlineUsers = new Map();
+let activeSessions = [];
 
 io.on("connection", (socket) => {
   console.log("✅ New connection:", socket.id);
 
-  // ---------------- Employee/Admin Online ----------------
+  // Employee/Admin comes online
   socket.on("employeeOnline", async (user) => {
-    if (!user || !user.id) {
-      console.warn("⚠️ employeeOnline called without a valid user object");
-      return;
-    }
+    if (!user || !user.id) return;
 
     const conns = onlineUsers.get(user.id) || [];
-    conns.push({
-      socketId: socket.id,
-      name: user.name || "Unnamed",
-      status: "Active",
-      screen: false,
-      voice: false,
-      webcam: false,
-    });
+    conns.push({ socketId: socket.id, name: user.name || "Unnamed", status: "Active", screen: false, voice: false, webcam: false });
     onlineUsers.set(user.id, conns);
 
-    // Send pending monitoring requests to employee
     if (!user.id.startsWith("admin")) {
-      const pending = await MonitoringRequest.find({
-        employeeId: user.id,
-        status: "pending",
-      });
+      const pending = await MonitoringRequest.find({ employeeId: user.id, status: "pending" });
       pending.forEach((r) => socket.emit("receiveMonitoringRequest", r));
     }
 
-    // Broadcast all online users to clients
     broadcastOnlineEmployees();
   });
 
-  // ---------------- Admin Sends Monitoring Request ----------------
-  socket.on("sendMonitoringRequest", async (req) => {
-    try {
-      if (!req || !req.employeeId || !req.adminId) {
-        console.warn("⚠️ Invalid monitoring request received:", req);
-        return;
-      }
+  // Admin sends monitoring request
+  // Admin sends monitoring request
+socket.on("sendMonitoringRequest", async (req) => {
+  try {
+    if (!req || !req.employeeId || !req.adminId) return;
 
-      const newReq = await MonitoringRequest.create(req);
+    // 1️⃣ Save request to DB
+    const newReq = await MonitoringRequest.create(req);
 
-      // Send request to employee if online
-      if (onlineUsers.has(req.employeeId)) {
-        onlineUsers.get(req.employeeId).forEach((c) =>
-          io.to(c.socketId).emit("receiveMonitoringRequest", newReq)
-        );
-      }
-
-      // Notify all admins about pending requests
-      onlineUsers.forEach(async (conns, userId) => {
-        if (userId.startsWith("admin")) {
-          const pending = await MonitoringRequest.find({
-            adminId: userId,
-            status: "pending",
-          });
-          conns.forEach((c) => io.to(c.socketId).emit("pendingRequests", pending));
-        }
-      });
-
-      console.log(`📨 Monitoring request sent by ${req.adminId} to ${req.employeeId}`);
-    } catch (err) {
-      console.error("❌ Error sending monitoring request:", err);
-    }
-  });
-
-  // ---------------- Employee Responds ----------------
-  socket.on("respondMonitoringRequest", async (res) => {
-    try {
-      if (!res || !res._id || !res.adminId) return;
-
-      const updated = await MonitoringRequest.findByIdAndUpdate(
-        res._id,
-        { status: res.status, respondedAt: new Date() },
-        { new: true }
+    // 2️⃣ Notify employee if online
+    if (onlineUsers.has(req.employeeId)) {
+      onlineUsers.get(req.employeeId).forEach(c =>
+        io.to(c.socketId).emit("receiveMonitoringRequest", newReq)
       );
-
-      // Notify admin
-      if (onlineUsers.has(res.adminId)) {
-        onlineUsers.get(res.adminId).forEach((c) =>
-          io.to(c.socketId).emit("requestResponse", updated)
-        );
-      }
-
-      // Start session if accepted
-      if (res.status === "accepted") {
-        const session = {
-          id: Date.now(),
-          employeeId: res.employeeId,
-          adminId: res.adminId,
-          type: res.type,
-          startedAt: new Date().toLocaleTimeString(),
-        };
-        activeSessions.push(session);
-        io.emit("activeSessions", activeSessions);
-      }
-
-      console.log(`📩 Employee ${res.employeeId} responded with ${res.status}`);
-    } catch (err) {
-      console.error("❌ Error responding to request:", err);
     }
-  });
 
-  // ---------------- Stop Session ----------------
+    // 3️⃣ Update all admins with pending requests
+    onlineUsers.forEach(async (conns, userId) => {
+      if (!userId.startsWith("admin")) return;
+      const pending = await MonitoringRequest.find({ adminId: userId, status: "pending" });
+      conns.forEach(c => io.to(c.socketId).emit("pendingRequests", pending));
+    });
+
+  } catch (err) {
+    console.error("Failed to send monitoring request:", err);
+  }
+});
+
+
+// Employee responds to request
+socket.on("respondMonitoringRequest", async (res) => {
+  try {
+    if (!res || !res._id || !res.adminId) return;
+
+    const updated = await MonitoringRequest.findByIdAndUpdate(
+      res._id,
+      {
+        status: res.status,
+        respondedAt: new Date(),
+        allowScreen: res.allowScreen,
+        allowAudio: res.allowAudio,
+        allowWebcam: res.allowWebcam
+      },
+      { new: true }
+    );
+
+    // Notify the admin
+    if (onlineUsers.has(res.adminId)) {
+      onlineUsers.get(res.adminId).forEach(c =>
+        io.to(c.socketId).emit("requestResponse", updated)
+      );
+    }
+
+    // Start session if accepted
+    if (res.status === "accepted") {
+      const session = {
+        id: Date.now(),
+        employeeId: res.employeeId,
+        adminId: res.adminId,
+        type: res.type,
+        startedAt: new Date().toLocaleTimeString()
+      };
+      activeSessions.push(session);
+      io.emit("activeSessions", activeSessions);
+    }
+  } catch (err) {
+    console.error("Respond monitoring request error:", err);
+  }
+});
+
+
+  // Stop session
   socket.on("stopSession", (sessionId) => {
     activeSessions = activeSessions.filter((s) => s.id !== sessionId);
     io.emit("activeSessions", activeSessions);
   });
 
-  // ---------------- Update Employee Status ----------------
+  // Update status (screen/audio/webcam)
   socket.on("updateStatus", ({ userId, screen, voice, webcam }) => {
     if (!userId || !onlineUsers.has(userId)) return;
-
     const conns = onlineUsers.get(userId);
-    conns.forEach((c) => {
-      c.screen = screen;
-      c.voice = voice;
-      c.webcam = webcam;
-    });
+    conns.forEach((c) => { c.screen = screen; c.voice = voice; c.webcam = webcam; });
     onlineUsers.set(userId, conns);
     broadcastOnlineEmployees();
   });
 
-  // ---------------- Chat Messages ----------------
+  // Chat
   socket.on("sendMessage", async (data) => {
     const { senderId, receiverId, text } = data;
     if (!senderId || !receiverId || !text) return;
-
     try {
       const newMsg = new Message({ senderId, receiverId, text });
       await newMsg.save();
-
       [senderId, receiverId].forEach((id) => {
-        if (onlineUsers.has(id)) {
-          onlineUsers.get(id).forEach((c) =>
-            io.to(c.socketId).emit("receiveMessage", newMsg)
-          );
-        }
+        if (onlineUsers.has(id)) onlineUsers.get(id).forEach((c) => io.to(c.socketId).emit("receiveMessage", newMsg));
       });
-    } catch (err) {
-      console.error("❌ Error saving message:", err);
-    }
+    } catch (err) { console.error(err); }
   });
 
-  // ---------------- Disconnect ----------------
+  // Disconnect
   socket.on("disconnect", () => {
     onlineUsers.forEach((conns, userId) => {
       const remaining = conns.filter((c) => c.socketId !== socket.id);
       if (remaining.length === 0) onlineUsers.delete(userId);
       else onlineUsers.set(userId, remaining);
     });
-
     broadcastOnlineEmployees();
-    console.log("❌ Disconnected:", socket.id);
   });
 
-  // ---------------- Helper: Broadcast Online Employees ----------------
   function broadcastOnlineEmployees() {
-    io.emit(
-      "onlineEmployees",
-      Array.from(onlineUsers.entries()).flatMap(([id, conns]) =>
-        conns.map((c) => ({ userId: id, ...c }))
-      )
-    );
+    io.emit("onlineEmployees", Array.from(onlineUsers.entries()).flatMap(([id, conns]) => conns.map((c) => ({ userId: id, ...c }))));
   }
 });
 
-// ---------------- Connect to MongoDB & Start Server ----------------
-mongoose
-  .connect(process.env.MONGO_URI)
+// ---------------- Mongo & Server ----------------
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => console.error(err));

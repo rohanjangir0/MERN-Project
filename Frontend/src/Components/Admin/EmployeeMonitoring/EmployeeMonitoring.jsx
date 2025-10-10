@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
-import axios from "axios";
-import { Room, RoomEvent } from "livekit-client";
+import React, { useEffect, useRef, useState } from "react";
 import { useSocket } from "../../../context/SocketContext";
+import { Room, RoomEvent } from "livekit-client";
 import "./EmployeeMonitoring.css";
 
 export default function EmployeeMonitoring() {
@@ -10,320 +9,189 @@ export default function EmployeeMonitoring() {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [activeSessions, setActiveSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [reconnecting, setReconnecting] = useState(false);
 
-  const videoContainerRef = useRef(null);
+  const videoRef = useRef(null);
   const roomRef = useRef(null);
   const currentTrackRef = useRef(null);
-  const adminId = "admin-1";
 
+  const adminId = "admin-1"; // Replace with real admin ID if dynamic
+
+  // ---------------- Socket setup ----------------
   useEffect(() => {
     if (!socket) return;
 
-    fetchData();
+    console.log("✅ Socket connected:", socket.id);
+
+    fetchInitialData();
 
     socket.emit("employeeOnline", { id: adminId, name: "Admin" });
 
     socket.on("onlineEmployees", handleOnline);
     socket.on("pendingRequests", setPendingRequests);
-    socket.on("activeSessions", setActiveSessions);
     socket.on("requestResponse", handleRequestResponse);
+    socket.on("activeSessions", setActiveSessions);
 
     return () => {
-      socket.off("onlineEmployees");
-      socket.off("pendingRequests");
+      socket.off("onlineEmployees", handleOnline);
+      socket.off("pendingRequests", setPendingRequests);
+      socket.off("requestResponse", handleRequestResponse);
       socket.off("activeSessions");
-      socket.off("requestResponse");
       disconnectRoom();
     };
   }, [socket]);
 
-  const fetchData = async () => {
+  // ---------------- Fetch employees & requests ----------------
+  const fetchInitialData = async () => {
     try {
-      const empRes = await axios.get("http://localhost:5000/api/employees");
-      setEmployees(empRes.data);
+      const empRes = await fetch("http://localhost:5000/api/employees");
+      const empData = await empRes.json();
+      setEmployees(empData);
 
-      const reqRes = await axios.get(
-        `http://localhost:5000/api/monitoringRequests/admin/${adminId}`
-      );
-      setPendingRequests(reqRes.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
+      const reqRes = await fetch(`http://localhost:5000/api/monitoringRequests/admin/${adminId}`);
+      const reqData = await reqRes.json();
+      setPendingRequests(reqData);
+
       setLoading(false);
+    } catch (err) {
+      console.error("Failed to fetch initial data:", err);
     }
   };
 
+  // ---------------- Socket handlers ----------------
   const handleOnline = (list) => {
-    setEmployees((prev) =>
-      prev.map((emp) => ({
+    setEmployees(prev =>
+      prev.map(emp => ({
         ...emp,
-        status: list.some((e) => e.userId === emp.employeeId)
-          ? "Online"
-          : "Offline",
+        status: list.some(e => e.userId === emp.employeeId) ? "Online" : "Offline"
       }))
     );
   };
 
   const handleRequestResponse = (req) => {
+    setPendingRequests(prev => prev.map(r => r._id === req._id ? { ...r, status: req.status } : r));
+
     if (req.status === "accepted") startViewing(req);
   };
 
-  const requestEmployee = (emp) => {
-    setSelectedEmployee(emp);
-    setShowModal(true);
-  };
-
-  const sendRequest = (type, reason, duration) => {
-    if (!socket || !selectedEmployee) return;
-
-    const req = {
-      adminId,
-      employeeId: selectedEmployee.employeeId,
-      type,
-      message: reason || `Admin requests ${type} access`,
-      duration,
-    };
-
-    socket.emit("sendMonitoringRequest", req);
-
-    setPendingRequests((prev) => [
-      ...prev,
-      { ...req, _id: Date.now().toString(), status: "pending" },
-    ]);
-
-    setShowModal(false);
-  };
-
+  // ---------------- LiveKit viewing ----------------
   const disconnectRoom = () => {
-    detachTrack();
-    if (roomRef.current) {
-      roomRef.current.disconnect();
-      roomRef.current = null;
-    }
-    if (videoContainerRef.current) videoContainerRef.current.innerHTML = "";
+    if (currentTrackRef.current) currentTrackRef.current.detach();
+    if (roomRef.current) roomRef.current.disconnect();
+    if (videoRef.current) videoRef.current.innerHTML = "";
+    currentTrackRef.current = null;
+    roomRef.current = null;
   };
 
-  // ---------------- Updated startViewing ----------------
   const startViewing = async (req) => {
     try {
-      if (!selectedEmployee) return;
+      disconnectRoom();
 
-      const roomName = `monitoring-${selectedEmployee.employeeId}-${req._id}`;
+      const roomName = `monitoring-${req.employeeId}-${req._id}`;
       const res = await fetch(
-        `http://localhost:5000/api/livekit/token?room=${roomName}&identity=${adminId}&name=Admin`
+        `http://localhost:5000/api/livekit/token?room=${encodeURIComponent(roomName)}&identity=${adminId}&name=Admin&role=admin`
       );
       const { token, url } = await res.json();
+      if (!token || !url) throw new Error("Invalid LiveKit token or URL");
 
       const room = new Room({ adaptiveStream: true, dynacast: true });
       roomRef.current = room;
 
-      // Room event listeners
-      room.on(RoomEvent.Disconnected, () => {
-        if (videoContainerRef.current)
-          videoContainerRef.current.innerHTML =
-            "<p class='disconnected'>🔴 Stream ended or disconnected</p>";
-      });
-      room.on(RoomEvent.Reconnecting, () => setReconnecting(true));
-      room.on(RoomEvent.Reconnected, () => setReconnecting(false));
-
-      // Subscribe to new tracks
       room.on(RoomEvent.TrackSubscribed, attachTrack);
       room.on(RoomEvent.TrackUnsubscribed, detachTrack);
 
-      // Connect to LiveKit room
       await room.connect(url, token);
 
-      // Subscribe to existing tracks safely
+      // Attach already published tracks
       for (const participant of room.participants.values()) {
         for (const publication of participant.tracks.values()) {
-          if (publication.isSubscribed && publication.track) {
-            attachTrack(publication.track);
-          } else {
-            publication.on("subscribed", attachTrack);
-          }
+          if (publication.isSubscribed && publication.track) attachTrack(publication.track);
+          else publication.on("subscribed", attachTrack);
         }
       }
 
-      console.log("✅ Admin connected and ready to view employee screen");
+      console.log("✅ Connected to employee stream:", roomName);
     } catch (err) {
-      console.error("❌ Viewing failed:", err);
-      alert("Failed to view employee screen. Check network or LiveKit server.");
+      console.error("Failed to connect:", err);
+      alert("Failed to connect. Check console.");
     }
   };
 
-  // ---------------- Helper functions ----------------
   const attachTrack = (track) => {
-    if (!track || !videoContainerRef.current) return;
-
-    if (currentTrackRef.current) detachTrack();
+    if (!track || !videoRef.current) return;
+    detachTrack();
 
     const el = track.attach();
     el.style.width = "100%";
     el.style.borderRadius = "16px";
-    el.style.maxHeight = "480px";
-
-    videoContainerRef.current.innerHTML = "";
-    videoContainerRef.current.appendChild(el);
-
+    videoRef.current.innerHTML = "";
+    videoRef.current.appendChild(el);
     currentTrackRef.current = track;
   };
 
   const detachTrack = () => {
-    if (currentTrackRef.current) {
-      currentTrackRef.current.detach();
-      currentTrackRef.current = null;
-    }
-    if (videoContainerRef.current)
-      videoContainerRef.current.innerHTML =
-        "<p class='disconnected'>🔴 Stream ended</p>";
+    if (currentTrackRef.current) currentTrackRef.current.detach();
+    if (videoRef.current) videoRef.current.innerHTML = "<p class='disconnected'>🔴 Stream ended</p>";
+    currentTrackRef.current = null;
+  };
+
+  // ---------------- Send monitoring request ----------------
+  const sendMonitoringRequest = (employeeId) => {
+    if (!socket) return;
+
+    const request = {
+      employeeId,
+      adminId,
+      type: "screen",
+      status: "pending",
+      message: "Please share your screen and audio for monitoring."
+    };
+
+    socket.emit("sendMonitoringRequest", request);
+    setPendingRequests(prev => [...prev, { ...request, _id: Date.now() }]);
   };
 
   if (loading) return <p>Loading dashboard...</p>;
 
+  // ---------------- Render ----------------
   return (
     <div className="monitoring-dashboard">
-      <header className="header">
-        <h1>Employee Monitoring Center</h1>
-        <p>Real-time insights with Apple-like premium design ✨</p>
-      </header>
+      <h1>Employee Monitoring Center</h1>
 
-      {reconnecting && (
-        <div className="reconnecting-banner">
-          🔄 Reconnecting to live stream...
-        </div>
-      )}
-
-      <div className="status-bar">
-        <span className="online">
-          🟢 {employees.filter((e) => e.status === "Online").length} Online
-        </span>
-        <span className="active">📺 {activeSessions.length} Active</span>
-      </div>
-
-      <h2 className="section-title">Employees Overview</h2>
       <div className="bento-grid">
-        {employees.map((emp, idx) => (
-          <div
-            key={emp.employeeId || emp._id || `emp-${idx}`}
-            className={`bento-card ${emp.status?.toLowerCase() || "offline"}`}
-          >
-            <div className="bento-header">
-              <div>
-                <h3>{emp.name || emp.employeeName || "Unnamed Employee"}</h3>
-                <p>{emp.role || "Role not specified"}</p>
-              </div>
-              <span
-                className={`status-dot ${
-                  emp.status === "Online"
-                    ? "green"
-                    : emp.status === "Offline"
-                    ? "gray"
-                    : "orange"
-                }`}
-              ></span>
-            </div>
-
-            <div className="bento-body">
-              <p>
-                Department: <strong>{emp.department || "N/A"}</strong>
-              </p>
-              <div className="progress-bar">
-                <div
-                  className={`progress-fill ${
-                    emp.status === "Online" ? "online" : "offline"
-                  }`}
-                  style={{ width: emp.status === "Online" ? "90%" : "40%" }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="bento-footer">
-              <button onClick={() => requestEmployee(emp)}>Request Access</button>
-            </div>
+        {employees.map(emp => (
+          <div key={emp.employeeId} className={`bento-card ${emp.status?.toLowerCase() || "offline"}`}>
+            <h3>{emp.name}</h3>
+            <p>Status: {emp.status || "Offline"}</p>
+            <button
+              onClick={() => sendMonitoringRequest(emp.employeeId)}
+              className="request-btn"
+              disabled={emp.status !== "Online"}
+            >
+              Request Monitoring
+            </button>
           </div>
         ))}
       </div>
 
-      <div className="toast-section">
-        <h3>Requests & Sessions</h3>
-        <div className="toast-container">
-          {pendingRequests.map((req, idx) => (
-            <div
-              key={req._id || `${req.employeeId}-pending-${idx}`}
-              className="toast pending-toast"
-            >
-              <p>
-                <strong>{req.employeeId}</strong> — {req.message}
-              </p>
-              <span>🕓 Pending</span>
+      <section className="pending-requests">
+        <h3>Pending Requests</h3>
+        {pendingRequests.length === 0 ? <p>No pending requests</p> :
+          pendingRequests.map(req => (
+            <div key={req._id} className="request-card">
+              <p>Employee: {req.employeeId}</p>
+              <p>Type: {req.type}</p>
+              <p>Status: {req.status}</p>
             </div>
-          ))}
-          {activeSessions.map((act, idx) => (
-            <div
-              key={act._id || `${act.employeeId}-active-${idx}`}
-              className="toast active-toast"
-            >
-              <p>
-                <strong>{act.employeeId}</strong> — {act.message}
-              </p>
-              <span>✅ Active</span>
-            </div>
-          ))}
-        </div>
-      </div>
+          ))
+        }
+      </section>
 
       <section className="viewer">
         <h3>Live View</h3>
-        <div ref={videoContainerRef} className="live-view"></div>
-      </section>
-
-      {showModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Request Access</h3>
-            <p>
-              Send monitoring request to{" "}
-              <strong>{selectedEmployee?.name || "Unnamed Employee"}</strong>
-            </p>
-
-            <label>Type</label>
-            <select id="type">
-              <option>Screen Share</option>
-              <option>Voice</option>
-              <option>Webcam</option>
-            </select>
-
-            <label>Duration (minutes)</label>
-            <input id="duration" type="number" defaultValue="30" />
-
-            <label>Reason</label>
-            <input id="reason" placeholder="e.g. Code review, feedback..." />
-
-            <div className="modal-actions">
-              <button
-                onClick={() => {
-                  const type = document.getElementById("type").value;
-                  const reason = document.getElementById("reason").value;
-                  const duration = document.getElementById("duration").value;
-                  sendRequest(type, reason, duration);
-                }}
-                className="primary"
-              >
-                Send
-              </button>
-              <button
-                className="secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+        <div ref={videoRef} className="live-view">
+          <p className="disconnected">🔴 Waiting for employee...</p>
         </div>
-      )}
+      </section>
     </div>
   );
 }

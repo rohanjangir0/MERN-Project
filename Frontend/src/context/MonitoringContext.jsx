@@ -1,5 +1,4 @@
-// context/MonitoringContext.jsx
-import React, { createContext, useState, useEffect, useContext, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useSocket } from "./SocketContext";
 
 const MonitoringContext = createContext();
@@ -8,69 +7,63 @@ export const MonitoringProvider = ({ children, employeeId, employeeName }) => {
   const { socket } = useSocket();
   const [requests, setRequests] = useState([]);
   const [latestRequest, setLatestRequest] = useState(null);
-  const handledRequests = useRef(new Set()); // ✅ store handled request IDs
+  const handledRequests = useRef(new Set());
 
-  // Fetch existing requests
+  // Fetch initial requests
   useEffect(() => {
     if (!employeeId) return;
-    const fetchRequests = async () => {
-      try {
-        const res = await fetch(`http://localhost:5000/api/monitoringRequests/employee/${employeeId}`);
-        const data = await res.json();
-        setRequests(data || []);
-      } catch (err) {
-        console.error("Error fetching requests:", err);
-      }
-    };
-    fetchRequests();
+    fetch(`http://localhost:5000/api/monitoringRequests/employee/${employeeId}`)
+      .then(res => res.json())
+      .then(data => setRequests(data || []))
+      .catch(console.error);
   }, [employeeId]);
 
-  // Socket listeners
+  // Setup socket listeners
   useEffect(() => {
     if (!socket || !employeeId) return;
 
     socket.emit("employeeOnline", { id: employeeId, name: employeeName || "Employee" });
 
-    const handleReceiveRequest = (req) => {
-      if (req.employeeId === employeeId && !handledRequests.current.has(req._id)) {
-        setRequests((prev) => (prev.some(r => r._id === req._id) ? prev : [...prev, req]));
-        setLatestRequest(req); // show popup only if not handled
-      }
+    const receiveRequest = (req) => {
+      if (req.employeeId !== employeeId) return;
+      if (handledRequests.current.has(req._id)) return;
+
+      setRequests(prev => [...prev, req]);
+      setLatestRequest(req);
     };
 
-    const handleRequestResponse = (updatedReq) => {
-      setRequests((prev) => prev.map(r => r._id === updatedReq._id ? updatedReq : r));
-      // if latestRequest has been handled, remove popup
+    const requestResponse = (updatedReq) => {
+      setRequests(prev => prev.map(r => r._id === updatedReq._id ? updatedReq : r));
       if (latestRequest?._id === updatedReq._id) {
         setLatestRequest(null);
         handledRequests.current.add(updatedReq._id);
       }
     };
 
-    socket.on("receiveMonitoringRequest", handleReceiveRequest);
-    socket.on("requestResponse", handleRequestResponse);
+    socket.on("receiveMonitoringRequest", receiveRequest);
+    socket.on("requestResponse", requestResponse);
 
     return () => {
-      socket.off("receiveMonitoringRequest", handleReceiveRequest);
-      socket.off("requestResponse", handleRequestResponse);
+      socket.off("receiveMonitoringRequest", receiveRequest);
+      socket.off("requestResponse", requestResponse);
     };
   }, [socket, employeeId, employeeName, latestRequest]);
 
-  const respondRequest = (req, status) => {
+  // Send response
+  const respondRequest = (req, status, allowScreen = true, allowAudio = true, allowWebcam = true) => {
     if (!socket) return;
 
-    socket.emit("respondMonitoringRequest", { ...req, status });
+    socket.emit("respondMonitoringRequest", {
+      ...req,
+      status,
+      allowScreen,
+      allowAudio,
+      allowWebcam
+    });
 
-    // mark as handled
     handledRequests.current.add(req._id);
-
-    // update request list
-    setRequests((prev) => prev.map(r => r._id === req._id ? { ...r, status } : r));
-
-    // remove popup if this is the latest request
-    if (latestRequest?._id === req._id) {
-      setLatestRequest(null);
-    }
+    setRequests(prev => prev.map(r => r._id === req._id ? { ...r, status, allowScreen, allowAudio, allowWebcam } : r));
+    if (latestRequest?._id === req._id) setLatestRequest(null);
   };
 
   return (

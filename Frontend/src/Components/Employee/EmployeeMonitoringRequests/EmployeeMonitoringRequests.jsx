@@ -10,10 +10,8 @@ export default function EmployeeMonitoringRequests() {
   return (
     <div className="monitor-requests">
       <h2>Incoming Monitoring Requests</h2>
-      {requests.length === 0 ? (
-        <p>No new requests.</p>
-      ) : (
-        requests.map((req) => (
+      {requests.length === 0 ? <p>No new requests.</p> :
+        requests.map(req => (
           <div key={req._id} className={`req-card ${req.status}`}>
             <div className="req-info">
               <h4>{req.type} Request</h4>
@@ -21,15 +19,12 @@ export default function EmployeeMonitoringRequests() {
             </div>
             {req.status === "pending" ? (
               <div className="req-actions">
-                <button onClick={() => respondRequest(req, "accepted")}>✅ Allow</button>
-                <button onClick={() => respondRequest(req, "declined")}>❌ Deny</button>
+                <button onClick={() => respondRequest(req, "accepted", true, true, true)}>✅ Allow All</button>
+                <button onClick={() => respondRequest(req, "declined", false, false, false)}>❌ Deny</button>
               </div>
-            ) : (
-              <p>Status: {req.status}</p>
-            )}
+            ) : <p>Status: {req.status}</p>}
           </div>
-        ))
-      )}
+        ))}
     </div>
   );
 }

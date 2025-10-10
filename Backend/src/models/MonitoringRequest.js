@@ -1,11 +1,15 @@
+// models/MonitoringRequest.js
 const mongoose = require("mongoose");
 
 const MonitoringRequestSchema = new mongoose.Schema({
   adminId: String,
   employeeId: String,
-  type: String, // Screen / Voice / Webcam
+  type: { type: String, default: "Screen" }, 
   message: String,
-  status: { type: String, default: "pending" }, // pending/accepted/declined
+  allowScreen: { type: Boolean, default: true },
+  allowAudio: { type: Boolean, default: false },
+  allowWebcam: { type: Boolean, default: false },
+  status: { type: String, default: "pending" }, 
   createdAt: { type: Date, default: Date.now },
   respondedAt: Date,
 });
