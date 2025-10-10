@@ -9,11 +9,13 @@ export async function generateToken(roomName, identity, name, permissions = { ca
   const at = new AccessToken(API_KEY, API_SECRET, { identity, name });
 
   const grant = {
-    room: roomName,
-    canPublish: permissions.canPublish,
-    audio: permissions.audio,
-    video: permissions.video
-  };
+  roomJoin: true,
+  room: roomName,
+  canPublish: permissions.canPublish,
+  canSubscribe: true,
+  canPublishData: true,
+};
+
 
   at.addGrant(grant);
 
