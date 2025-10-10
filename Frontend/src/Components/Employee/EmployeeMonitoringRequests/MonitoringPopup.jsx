@@ -6,22 +6,19 @@ export default function MonitoringPopup() {
   const { latestRequest, respondRequest } = useMonitoring();
   const [allowAudio, setAllowAudio] = useState(true);
   const [allowWebcam, setAllowWebcam] = useState(true);
-  const [allowScreen, setAllowScreen] = useState(true); // ✅ new toggle
+  const [allowScreen, setAllowScreen] = useState(true);
   const roomRef = useRef(null);
 
+  // Cleanup tracks and disconnect on unmount
   useEffect(() => {
-    return cleanupStreams; // ✅ proper cleanup in unmount
+    return () => cleanupStreams();
   }, []);
 
   const cleanupStreams = () => {
     try {
       if (roomRef.current) {
         const participant = roomRef.current.localParticipant;
-        if (participant?.tracks) {
-          participant.tracks.forEach(pub => {
-            if (pub.track) pub.track.stop();
-          });
-        }
+        participant?.tracks?.forEach(pub => pub.track?.stop());
         roomRef.current.disconnect();
         roomRef.current = null;
       }
@@ -36,37 +33,43 @@ export default function MonitoringPopup() {
 
       const tracks = [];
 
-      // ✅ Step 1: Optional Screen Share
+      // SCREEN SHARE (optional)
       if (allowScreen) {
-        console.log("Requesting screen share...");
+        // Ask only for video first (audio separately to avoid conflicts)
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: allowAudio,
+          audio: false,
         });
         tracks.push(...displayStream.getTracks());
-        console.log("✅ Screen stream captured.");
+
+        // Optional screen audio
+        if (allowAudio) {
+          const audioTracks = displayStream.getAudioTracks();
+          if (audioTracks.length) tracks.push(...audioTracks);
+        }
+        console.log("✅ Screen stream captured");
       }
 
-      // ✅ Step 2: Delay before webcam
-      await new Promise((res) => setTimeout(res, 500));
+      // Delay before webcam request (required in Chrome)
+      await new Promise((res) => setTimeout(res, 300));
 
-      // ✅ Step 3: Optional Webcam
+      // WEBCAM (optional)
       if (allowWebcam) {
-        console.log("Requesting webcam access...");
         const webcamStream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: !allowScreen && allowAudio, // only audio if screen not shared
+          audio: false, // do not conflict with screen audio
         });
         tracks.push(...webcamStream.getTracks());
-        console.log("✅ Webcam stream captured.");
+        console.log("✅ Webcam stream captured");
       }
 
-      // ✅ Step 4: Connect to LiveKit
+      // CONNECT TO LIVEKIT
       const roomName = `monitoring-${req.employeeId}-${req._id}`;
       const res = await fetch(
-        `http://localhost:5000/api/livekit/token?room=${encodeURIComponent(roomName)}&identity=${req.employeeId}&name=Employee&role=employee`
+        `https://localhost:5000/api/livekit/token?room=${encodeURIComponent(
+          roomName
+        )}&identity=${req.employeeId}&name=Employee&role=employee`
       );
-
       const { token, url } = await res.json();
       if (!token || !url) throw new Error("Invalid LiveKit token or URL");
 
@@ -76,21 +79,26 @@ export default function MonitoringPopup() {
       await room.connect(url, token);
       console.log("✅ Connected to LiveKit:", roomName);
 
-      // ✅ Step 5: Publish all tracks
+      // Publish tracks
       for (const track of tracks) {
         await room.localParticipant.publishTrack(track);
       }
 
-      console.log("✅ Streaming started successfully:", roomName);
+      console.log("✅ Streaming started successfully");
     } catch (err) {
       console.error("Streaming failed:", err);
-      alert(`Streaming failed. Check permissions or HTTPS.\nError: ${err.message}`);
+      alert(
+        `Streaming failed. Make sure you allowed permissions and are on HTTPS.\nError: ${err.message}`
+      );
     }
   };
 
   const handleResponse = async (status) => {
     respondRequest(latestRequest, status, allowAudio, allowWebcam);
-    if (status === "accepted") await startStreaming(latestRequest);
+    if (status === "accepted") {
+      // Only trigger streaming after user click (required by browser)
+      await startStreaming(latestRequest);
+    }
   };
 
   if (!latestRequest) return null;
