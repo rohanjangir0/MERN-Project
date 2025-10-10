@@ -79,38 +79,53 @@ export default function EmployeeMonitoring() {
   };
 
   const startViewing = async (req) => {
-    try {
-      disconnectRoom();
+  try {
+    disconnectRoom();
 
-      const roomName = `monitoring-${req.employeeId}-${req._id}`;
-      const res = await fetch(
-        `http://localhost:5000/api/livekit/token?room=${encodeURIComponent(roomName)}&identity=${adminId}&name=Admin&role=admin`
-      );
-      const { token, url } = await res.json();
-      if (!token || !url) throw new Error("Invalid LiveKit token or URL");
+    const roomName = `monitoring-${req.employeeId}-${req._id}`;
+    const res = await fetch(
+      `http://localhost:5000/api/livekit/token?room=${encodeURIComponent(roomName)}&identity=${adminId}&name=Admin&role=admin`
+    );
+    const { token, url } = await res.json();
+    if (!token || !url) throw new Error("Invalid LiveKit token or URL");
 
-      const room = new Room({ adaptiveStream: true, dynacast: true });
-      roomRef.current = room;
+    const room = new Room({ adaptiveStream: true, dynacast: true });
+    roomRef.current = room;
 
-      room.on(RoomEvent.TrackSubscribed, attachTrack);
-      room.on(RoomEvent.TrackUnsubscribed, detachTrack);
+    // Attach listeners first
+    room.on(RoomEvent.TrackSubscribed, attachTrack);
+    room.on(RoomEvent.TrackUnsubscribed, detachTrack);
+    room.on(RoomEvent.Disconnected, () => {
+      console.warn("🔴 Disconnected from LiveKit room.");
+      detachTrack();
+    });
 
-      await room.connect(url, token);
+    console.log("Connecting to LiveKit:", url, "room:", roomName);
+    await room.connect(url, token);
+    console.log("✅ Connected to employee stream:", roomName);
 
-      // Attach already published tracks
+    // ✅ Safely check before looping participants
+    if (room.participants && room.participants.size > 0) {
       for (const participant of room.participants.values()) {
+        if (!participant.tracks) continue;
         for (const publication of participant.tracks.values()) {
-          if (publication.isSubscribed && publication.track) attachTrack(publication.track);
-          else publication.on("subscribed", attachTrack);
+          if (publication.isSubscribed && publication.track) {
+            attachTrack(publication.track);
+          } else {
+            publication.on("subscribed", attachTrack);
+          }
         }
       }
-
-      console.log("✅ Connected to employee stream:", roomName);
-    } catch (err) {
-      console.error("Failed to connect:", err);
-      alert("Failed to connect. Check console.");
+    } else {
+      console.warn("No participants yet — waiting for employee to publish tracks.");
     }
-  };
+
+  } catch (err) {
+    console.error("❌ Failed to connect or render video:", err);
+    alert("Failed to connect. Check console for details.");
+  }
+};
+
 
   const attachTrack = (track) => {
     if (!track || !videoRef.current) return;
